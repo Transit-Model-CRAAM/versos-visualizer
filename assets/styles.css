@@ -1,0 +1,310 @@
+:root {
+    --page-background-color: white;
+    --page-text-color: black;
+    --card-first-column-background-color: white;
+    --card-first-column-border-color: #FFECBC;
+    --card-first-column-shadow-color: darkgray;
+    --card-second-column-background-color: white;
+    --card-second-column-border-color: #FFECBC;
+    --card-second-column-shadow-color: darkgray;
+    --card-third-column-background-color: white;
+    --card-third-column-border-color: #FFECBC;
+    --card-third-column-shadow-color: darkgray;
+    --card-text-color: black;
+
+    --button-color: #6CADC8;
+    --button-disabled-color: #B5D1DD;
+    --button-hover-color: #1E6F88;
+    --button-clicked-color: #162B50;
+    --button-text-color: white;
+    --button-text-disabled-color: rgb(121, 121, 121);
+    --button-text-hover-color: white;
+    --button-text-clicked-color: white;
+
+    --font: "Avenir";
+}
+
+html, body {
+    background-color: var(--page-background-color);
+    color: var(--page-text-color);
+    /* font: var(--font); */
+}
+
+.page-container {
+    padding: 10px;
+    height: 100vh;
+    display: flex;
+    justify-content: start;
+    gap: 0.5rem;
+}
+
+.content-card {
+    color: var(--card-text-color);
+}
+
+.first-column-card {
+    background-color: var(--card-first-column-background-color);
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 2px 2px 6px var(--card-first-column-shadow-color);
+    border: 1.5px solid var(--card-first-column-border-color);
+}
+
+.second-column-card {
+    background-color: var(--card-second-column-background-color);
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 2px 2px 6px var(--card-second-column-shadow-color);
+    border: 1.5px solid var(--card-second-column-border-color);
+}
+
+.third-column-card {
+    background-color: var(--card-third-column-background-color);
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 2px 2px 6px var(--card-third-column-shadow-color);
+    border: 1.5px solid var(--card-third-column-border-color);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.same-line {
+    display: flex;
+    justify-content: start;
+    gap: 0.5rem;
+}
+
+/* COMPONENTS CSS */
+
+.button-style {
+    --button-color: #6CADC8 !important;
+    background-color: var(--button-color);
+    color: var(--button-text-color);
+}
+
+.button-style:hover {
+    --button-color: #1E6F88 !important;
+    background-color: var(--button-hover-color);
+    color: var(--button-text-hover-color);
+}
+
+.button-style:disabled {
+    background-color: var(--button-disabled-color);
+    color: var(--button-text-disabled-color);
+}
+
+/* Inputs Focus */
+.m_8fb7ebe7:focus, .m_8fb7ebe7:focus-within {
+    outline: none;
+    --input-bd: var(--button-hover-color);
+}
+
+/* Tab border */
+.m_539e827b:where([data-active]) {
+    border-color: var(--button-hover-color);
+}
+
+/* ELEMENTS CSS */
+
+.logo-style {
+    width: 500px;
+}
+
+.load-data-btn {
+    min-width: 136px;
+}
+
+.get-results-btn {
+    min-width: 148px;
+}
+
+/* CARDS CONTENT */
+
+.logo-card-content {
+    display: flex;
+    align-items: left;
+    justify-content: end;
+    height: 100%;
+    flex-direction: column;
+    text-align: center;
+}
+
+.timepicker-card-content,
+.download-content {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+}
+
+.home-page-card-width {
+    width: 33%;
+    display: flex;
+    flex-direction: column; 
+    gap: 0.5rem;
+}
+
+.home-data-graph-inputs,
+.home-inputs-blocks {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+}
+
+.home-inputs {
+    display: flex;
+    flex-direction: column; 
+    justify-content: space-between;
+    height: 100%;
+}
+
+.inputs-card-content {
+    display: flex;
+    align-items: center;
+    justify-content: end;
+    height: 100%;
+    flex-direction: column;
+    text-align: center;
+}
+
+.home-results-log {
+    height: 15vh;
+    background-color: var(--page-background-color);
+    margin-top: 10px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border: 2px solid var(--button-color);
+}
+
+.home-results-log-overlay {
+    position: relative;
+}
+
+.home-results-log-up {
+    background-color: #b5fbfb;
+    cursor: pointer;
+}
+
+.home-results-log-down {
+    background-color: #fcb4b4;
+    cursor: default;
+}
+
+.results-graph-contents {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.home-download-select {
+    flex: 1;
+}
+
+/* GRAPHS HEIGHT */
+
+.home-data-graph {
+    position: relative;
+    flex: 1 1 auto;
+    margin-bottom: 20px;
+}
+
+.home-background-graph {
+    position: relative;
+    height: 100%;
+}
+
+.home-results-graph {
+    position: relative;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* CARDS HEIGHT */
+
+.logo-card {
+    height: 250px;
+}
+
+.timepicker-card {
+    height: 120px;
+}
+
+.data-graph-card {
+    display: flex;
+    height: 100%;
+    flex-direction: column; 
+    justify-content: space-between;
+}
+
+.data-results-card {
+    display: flex;
+    flex: 1;
+    height: 100%;
+    max-height: 100%;
+    flex-direction: column; 
+    justify-content: space-between;
+}
+
+.background-graph-card {
+    height: 100%;
+}
+
+.inputs-card {
+    height: 250px;
+}
+
+.results-card {
+    height: 100%;
+}
+
+
+
+
+/* MOBILE!!! */
+/* On small screens, stack items vertically */
+@media (max-width: 768px) {
+    .page-container {
+        flex-direction: column;
+    }
+
+    .timepicker-card {
+        height: 100%;
+    }
+
+    .home-page-card-width {
+        width: 100%;
+        display: flex;
+        flex-direction: column; 
+        gap: 0.5rem;
+    }
+
+    .home-data-graph {
+        height: 320px;
+    }
+
+    .home-background-graph {
+        height: 100vh;
+    }
+
+    .inputs-card {
+        height: 200px;
+    }
+
+    .home-results-graph {
+        height: 45vh;
+    }
+
+    .home-results-graph-container {
+        height: 100%;
+    }
+
+    .logo-style {
+        width: 400px;
+    }
+
+    .logo-card {
+        height: 130px;
+    }
+}
