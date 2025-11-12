@@ -53,6 +53,36 @@ def generate_plot_layout(lang: str) -> dict:
         "colorway": COLORWAY,
     }
 
+def generate_result_plot_layout(lang: str) -> dict:
+    """
+    Function responsible for generating the result plot layout
+
+    Parameters
+    ----------
+    lang : str
+        Language of the page ("pt" or "en").
+
+    Returns
+    -------
+    dict
+        The dict for the result plot layout
+    """
+    translated = TRANSLATIONS[lang]
+    return {
+        "margin": {"r": 35, "t": 35, "b": 55, "l": 55},
+        "legend": {
+            "orientation": "h",  # horizontal legend
+            "yanchor": "bottom",
+            "y": -0.2,  # position below the graph
+            "xanchor": "center",
+            "x": 0.5,
+            "bgcolor": "rgba(0,0,0,0)",  # transparent background
+            "borderwidth": 0,
+        },
+        "yaxis": {"title": f"{translated['graphs']['intensity']}"},
+        "colorway": COLORWAY,
+    }
+
 def generate_fig_properties(lang: str) -> dict:
     """
     Function responsible for generating the regular fig properties
@@ -70,6 +100,25 @@ def generate_fig_properties(lang: str) -> dict:
     return {
         "data": [],
         "layout": generate_plot_layout(lang),
+    }
+
+def generate_result_fig_properties(lang: str) -> dict:
+    """
+    Function responsible for generating the result fig properties
+
+    Parameters
+    ----------
+    lang : str
+        Language of the page ("pt" or "en").
+
+    Returns
+    -------
+    dict
+        The dict for the result fig properties
+    """
+    return {
+        "data": [],
+        "layout": generate_result_plot_layout(lang),
     }
 
 def generate_background_plot_layout(lang: str) -> dict:
