@@ -1053,9 +1053,10 @@ def home_apply_dtw(
         patched_figure["data"][i*3]["name"] = f"[TARGET] {target_day} - {translated['graphs']['curve']} {curve_days[idx]} (FastDTW={dist:.2f})"
 
         # Ignore first and last % of the curve
-        cut = int((avoid_border/100) * len(diff))
-        diff[:cut] = 0
-        diff[-cut:] = 0
+        if avoid_border > 0:
+            cut = int((avoid_border/100) * len(diff))
+            diff[:cut] = 0
+            diff[-cut:] = 0
 
         curve_std = find_std(diff, number_of_segments, quantity_mean_std)
 
