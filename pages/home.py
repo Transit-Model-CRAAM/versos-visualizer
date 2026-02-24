@@ -64,14 +64,30 @@ def layout(**kwargs):
 
     timepicker_card = html.Div(
         [
+            # dmc.DateInput(
+            #     id="home_date_input",
+            #     label=translated["components"]["date_input"]["label"],
+            #     # description=translated["components"]["date_input"]["description"],
+            #     minDate="2012-01-24",
+            #     maxDate="2012-01-30",
+            #     className="custom-input",
+            # ),
             dmc.DateInput(
                 id="home_date_input",
                 label=translated["components"]["date_input"]["label"],
                 # description=translated["components"]["date_input"]["description"],
-                minDate="2012-01-24",
-                maxDate="2012-01-30",
+                minDate="2012-07-04",
+                maxDate="2012-07-27",
                 className="custom-input",
             ),
+            # dmc.DateInput(
+            #     id="home_date_input",
+            #     label=translated["components"]["date_input"]["label"],
+            #     # description=translated["components"]["date_input"]["description"],
+            #     minDate="2012-01-01",
+            #     maxDate="2012-01-07",
+            #     className="custom-input",
+            # ),
             dmc.Select(
                 id="home_data_select",
                 label=translated["components"]["data_select"],
@@ -124,7 +140,7 @@ def layout(**kwargs):
                     dmc.NumberInput(
                         label=translated["components"]["smooth_window"],
                         id="home_smooth_window_input",
-                        value=125,
+                        value=25,
                         min=1,
                         disabled=True,
                         debounce=True,
@@ -133,7 +149,7 @@ def layout(**kwargs):
                     dmc.NumberInput(
                         label=translated["components"]["iteration_quantity"],
                         id="home_n_apply_smooth_input",
-                        value=2,
+                        value=4,
                         min=0,
                         disabled=True,
                         debounce=True,
@@ -184,14 +200,38 @@ def layout(**kwargs):
                     dmc.NumberInput(
                         label=translated["components"]["std_input"],
                         id="home_diff_std_input",
-                        value=2,
-                        min=1.5,
-                        max=3.5,
+                        value=3,
+                        min=0.1,
+                        max=10,
                         disabled=True,
                         debounce=True,
                         decimalScale=2,
                         step=0.1,
                     ),
+                    dmc.NumberInput(
+                        label=translated["components"]["number_of_segments"],
+                        id="home_number_of_segments_input",
+                        value=8,
+                        min=1,
+                        disabled=True,
+                        debounce=True,
+                        allowDecimal=False,
+                    ),
+                    dmc.NumberInput(
+                        label=translated["components"]["quantity_mean_std"],
+                        id="home_quantity_mean_std_input",
+                        value=6,
+                        min=1,
+                        max=8,
+                        disabled=True,
+                        debounce=True,
+                        allowDecimal=False,
+                    ),
+                ],
+                className="same-line home-inputs-blocks"
+            ),
+            html.Div(
+                [
                     dmc.NumberInput(
                         label=translated["components"]["merge_gap"],
                         id="home_merge_gap_input",
@@ -204,27 +244,54 @@ def layout(**kwargs):
                     dmc.NumberInput(
                         label=translated["components"]["relative_height"],
                         id="home_relative_height_input",
-                        value=0.5,
+                        value=0.55,
                         min=0,
                         disabled=True,
                         debounce=True,
                         decimalScale=2,
                         step=0.01,
                     ),
+                    dmc.NumberInput(
+                        label=translated["components"]["avoid_border"],
+                        id="home_avoid_border_input",
+                        value=6,
+                        min=0,
+                        max=30,
+                        disabled=True,
+                        debounce=True,
+                        decimalScale=2,
+                        step=0.1,
+                    ),
                 ],
                 className="same-line home-inputs-blocks"
             ),
             html.Div(
                 [
-                    dmc.NumberInput(
-                        label=translated["components"]["min_curves"],
-                        id="home_min_curves_input",
-                        value=5,
-                        min=1,
-                        max=6,
-                        disabled=True,
-                        debounce=True,
-                        allowDecimal=False,
+                    html.Div(
+                        [
+                            dmc.NumberInput(
+                                label=translated["components"]["min_curves"],
+                                id="home_min_curves_input",
+                                value=70,
+                                min=1,
+                                max=100,
+                                disabled=True,
+                                debounce=True,
+                                allowDecimal=False,
+                            ),
+                            dmc.NumberInput(
+                                label=translated["components"]["dtw_weight"],
+                                id="home_dtw_weight_input",
+                                value=1.2,
+                                min=0.1,
+                                max=5,
+                                disabled=True,
+                                debounce=True,
+                                decimalScale=2,
+                                step=0.1,
+                            ),
+                        ],
+                        className="same-line"
                     ),
                     dmc.Button(
                         translated["components"]["obtain_results_button"],
@@ -272,7 +339,7 @@ def layout(**kwargs):
                                             dcc.Graph(
                                                 id="home_results_graph",
                                                 config=PLOT_CONFIG,
-                                                figure=generate_fig_properties(lang),
+                                                figure=generate_result_fig_properties(lang),
                                             )
                                         ],
                                         className="home-results-graph"
@@ -302,7 +369,7 @@ def layout(**kwargs):
                                             dcc.Graph(
                                                 id="home_results_background_graph",
                                                 config=PLOT_CONFIG,
-                                                figure=generate_fig_properties(lang),
+                                                figure=generate_result_fig_properties(lang),
                                             )
                                         ],
                                         className="home-results-graph"
@@ -493,6 +560,10 @@ def fits_table_to_list_of_lists(fits_table):
         (Output("home_apply_dtw_btn", "disabled"), True, False),
         (Output("home_diff_std_input", "disabled"), True, True),
         (Output("home_min_curves_input", "disabled"), True, True),
+        (Output("home_number_of_segments_input", "disabled"), True, True),
+        (Output("home_quantity_mean_std_input", "disabled"), True, True),
+        (Output("home_dtw_weight_input", "disabled"), True, True),
+        (Output("home_avoid_border_input", "disabled"), True, True),
         (Output("home_merge_gap_input", "disabled"), True, True),
         (Output("home_relative_height_input", "disabled"), True, True),
         (Output("home_get_results_btn", "disabled"), True, True),
@@ -595,7 +666,17 @@ def home_load_data(
         os.path.join("data", "D30.fits"),
     ]
 
-    target_file_to_load = os.path.join("data", f"D{date[-2:]}.fits")
+    all_files = [
+        os.path.join("data", f"D{int(date[-2:])-3:02d}.fits"),
+        os.path.join("data", f"D{int(date[-2:])-2:02d}.fits"),
+        os.path.join("data", f"D{int(date[-2:])-1:02d}.fits"),
+        os.path.join("data", f"D{int(date[-2:]):02d}.fits"),
+        os.path.join("data", f"D{int(date[-2:])+1:02d}.fits"),
+        os.path.join("data", f"D{int(date[-2:])+2:02d}.fits"),
+        os.path.join("data", f"D{int(date[-2:])+3:02d}.fits"),
+    ]
+
+    target_file_to_load = os.path.join("data", f"D{int(date[-2:]):02d}.fits")
 
     curve_data_list = []
     curve_days = []
@@ -645,6 +726,8 @@ def home_load_data(
     curvas_alinhadas = [curva - min_global for curva in curvas_interp]
     target_alinhada = target_data_interp - min_global
 
+    _, datetime_str = generate_datetime_list(loaded_data["target"]["table"])
+
     patched_figure = Patch()
 
     patched_figure["data"] = []
@@ -655,6 +738,7 @@ def home_load_data(
         patched_figure["data"].append(
             go.Scatter(
                 y=curva,
+                x=datetime_str,
                 mode='lines',
                 name=f"{curve_days[idx]}",
                 line=dict(width=1.5),
@@ -666,6 +750,7 @@ def home_load_data(
     patched_figure["data"].append(
         go.Scatter(
             y=target_alinhada,
+            x=datetime_str,
             mode='lines',
             name=f"[TARGET] {target_day}",
             line=dict(width=2.5),
@@ -674,7 +759,7 @@ def home_load_data(
         )
     )
 
-    return patched_figure, generate_background_fig_properties(lang), generate_fig_properties(lang), generate_fig_properties(lang), loaded_data, []
+    return patched_figure, generate_background_fig_properties(lang), generate_result_fig_properties(lang), generate_result_fig_properties(lang), loaded_data, []
 
 @callback(
     Output("home_data_graph", "figure", allow_duplicate=True),
@@ -759,10 +844,11 @@ def home_update_data(
 
     patched_figure = Patch()
 
-    patched_figure["data"][0]["y"] = target_alinhada
+    for idx, curva in enumerate(curvas_alinhadas[:-1]):
+        patched_figure["data"][idx]["y"] = curva
 
-    for idx, curva in enumerate(curvas_alinhadas):
-        patched_figure["data"][idx+1]["y"] = curva
+    patched_figure["data"][6]["y"] = target_alinhada
+
 
     return patched_figure
 
@@ -774,10 +860,14 @@ def home_update_data(
     Input("home_apply_dtw_btn", "n_clicks"),
     State("home_data_graph", "figure"),
     State("home_diff_std_input", "value"),
+    State("home_dtw_weight_input", "value"),
+    State("home_number_of_segments_input", "value"),
+    State("home_quantity_mean_std_input", "value"),
+    State("home_avoid_border_input", "value"),
     State("home_merge_gap_input", "value"),
     State("home_relative_height_input", "value"),
     State("home_smooth_window_input", "value"),
-    Input("home_n_apply_smooth_input", "value"),
+    State("home_n_apply_smooth_input", "value"),
     State("home_graph_raw_data", "data"),
     State("url", "search"),
     running=[
@@ -788,6 +878,10 @@ def home_update_data(
         (Output("home_apply_dtw_btn", "disabled"), True, False),
         (Output("home_diff_std_input", "disabled"), True, False),
         (Output("home_min_curves_input", "disabled"), True, False),
+        (Output("home_number_of_segments_input", "disabled"), True, False),
+        (Output("home_quantity_mean_std_input", "disabled"), True, False),
+        (Output("home_dtw_weight_input", "disabled"), True, False),
+        (Output("home_avoid_border_input", "disabled"), True, False),
         (Output("home_merge_gap_input", "disabled"), True, False),
         (Output("home_relative_height_input", "disabled"), True, False),
         (Output("home_get_results_btn", "disabled"), True, False),
@@ -798,6 +892,10 @@ def home_apply_dtw(
     nc1: int,
     fig: dict,
     diff_std: float,
+    weight: float,
+    number_of_segments: int,
+    quantity_mean_std: int,
+    avoid_border: float,
     gap: int,
     relative_height: float,
     smooth_value: int,
@@ -824,6 +922,18 @@ def home_apply_dtw(
 
     diff_std : float
         The multiplier of the standard deviation to be used to find peaks.
+
+    weight : float
+        The weight for the DTW distances.
+
+    number_of_segments : int
+        Number of segments that the curve will be divided for analysing.
+
+    quantity_mean_std : int
+        Number of stds selected from segments to take the mean.
+
+    avoid_border : float
+        Value to not consider border (0 - 30)%.
 
     gap : int
         The distance of points to merge peaks if they are too close to each other.
@@ -884,10 +994,14 @@ def home_apply_dtw(
         A dict with the list of all positive and negative peaks::
 
             {
-                "pos": list of list of tuple[float, float]
-                    A list with all the positive peaks (tuples) of all curves.
-                "neg": list of list of tuple[float, float]
-                    A list with all the negative peaks (tuples) of all curves.
+                "pos": dict
+                    - "interval": list of tuples [(start, end), ...]
+                    - "weight": float, weight of this interval (0-100)
+                    - "curve": any, identifier of the curve
+                "neg": dict
+                    - "interval": list of tuples [(start, end), ...]
+                    - "weight": float, weight of this interval (0-100)
+                    - "curve": any, identifier of the curve
             }
     """
     # --- Getting language of the page ---
@@ -936,14 +1050,28 @@ def home_apply_dtw(
 
     annotations = []
 
+    total_dist = sum(1 / x[1]**weight for x in distancias_sorted)
+
+    _, datetime_str = generate_datetime_list(loaded_data["target"]["table"])
+
     for i, (idx, dist) in enumerate(distancias_sorted):
-        diff = curvas_diff[i]
-        patched_figure["data"][i*3]["y"] = diff
+        diff = curvas_diff[i].copy()
+
+        patched_figure["data"][i*3]["y"] = curvas_diff[i]
+        patched_figure["data"][i*3]["x"] = datetime_str
         patched_figure["data"][i*3]["name"] = f"[TARGET] {target_day} - {translated['graphs']['curve']} {curve_days[idx]} (FastDTW={dist:.2f})"
-        patched_figure["data"][i*3+1]["y"] = [np.std(diff) * diff_std, np.std(diff) * diff_std]
-        patched_figure["data"][i*3+2]["y"] = [-(np.std(diff) * diff_std), -(np.std(diff) * diff_std)]
-        patched_figure["data"][i*3+1]["x"] = [0, len(diff)]
-        patched_figure["data"][i*3+2]["x"] = [0, len(diff)]
+
+        # Ignore first and last % of the curve
+        cut = int((avoid_border/100) * len(diff))
+        diff[:cut] = 0
+        diff[-cut:] = 0
+
+        curve_std = find_std(diff, number_of_segments, quantity_mean_std)
+
+        patched_figure["data"][i*3+1]["y"] = [curve_std * diff_std, curve_std * diff_std]
+        patched_figure["data"][i*3+2]["y"] = [-(curve_std * diff_std), -(curve_std * diff_std)]
+        patched_figure["data"][i*3+1]["x"] = [datetime_str[0], datetime_str[-1]]
+        patched_figure["data"][i*3+2]["x"] = [datetime_str[0], datetime_str[-1]]
 
         annotations.append(
             {
@@ -962,8 +1090,8 @@ def home_apply_dtw(
             }
         )
 
-        peaks_pos, _ = find_peaks(diff, height=np.std(diff) * diff_std, threshold = 0)
-        peaks_neg, _ = find_peaks(-diff, height=np.std(diff) * diff_std, threshold = 0)
+        peaks_pos, _ = find_peaks(diff, height=curve_std * diff_std, threshold = 0)
+        peaks_neg, _ = find_peaks(-diff, height=curve_std * diff_std, threshold = 0)
 
         intervals_pos = []
         intervals_neg = []
@@ -979,8 +1107,20 @@ def home_apply_dtw(
         merged_pos = merge_intervals(intervals_pos, gap=gap)
         merged_neg = merge_intervals(intervals_neg, gap=gap)
 
-        intervals_all_pos.append(merged_pos)
-        intervals_all_neg.append(merged_neg)
+        intervals_all_pos.append(
+            {
+                "interval": merged_pos,
+                "weight": (1 / dist**weight) / total_dist * 100,
+                "curve": idx
+            }
+        )
+        intervals_all_neg.append(
+            {
+                "interval": merged_neg,
+                "weight": (1 / dist**weight) / total_dist * 100,
+                "curve": idx
+            }
+        )
 
         for start, end in merged_pos:
             shapes.append(
@@ -988,8 +1128,8 @@ def home_apply_dtw(
                     "type": "rect",
                     "xref": "x",
                     "yref": "paper",
-                    "x0": start,
-                    "x1": end,
+                    "x0": datetime_str[int(start)],
+                    "x1": datetime_str[int(end)],
                     "y0": ranges[i][0],
                     "y1": ranges[i][1],
                     "fillcolor": "cyan",
@@ -1006,8 +1146,8 @@ def home_apply_dtw(
                     "type": "rect",
                     "xref": "x",
                     "yref": "paper",
-                    "x0": start,
-                    "x1": end,
+                    "x0": datetime_str[int(start)],
+                    "x1": datetime_str[int(end)],
                     "y0": ranges[i][0],
                     "y1": ranges[i][1],
                     "fillcolor": "red",
@@ -1032,7 +1172,13 @@ def home_apply_dtw(
 @callback(
     Output("home_background_graph", "figure", allow_duplicate=True),
     Output("home_peaks_intervals", "data", allow_duplicate=True),
+    Output("home_quantity_mean_std_input", "max"),
+    Output("home_quantity_mean_std_input", "value"),
     Input("home_diff_std_input", "value"),
+    Input("home_number_of_segments_input", "value"),
+    Input("home_quantity_mean_std_input", "value"),
+    Input("home_dtw_weight_input", "value"),
+    Input("home_avoid_border_input", "value"),
     Input("home_merge_gap_input", "value"),
     Input("home_relative_height_input", "value"),
     State("home_graph_raw_data", "data"),
@@ -1047,6 +1193,10 @@ def home_apply_dtw(
         (Output("home_apply_dtw_btn", "disabled"), True, False),
         (Output("home_diff_std_input", "disabled"), True, False),
         (Output("home_min_curves_input", "disabled"), True, False),
+        (Output("home_number_of_segments_input", "disabled"), True, False),
+        (Output("home_quantity_mean_std_input", "disabled"), True, False),
+        (Output("home_dtw_weight_input", "disabled"), True, False),
+        (Output("home_avoid_border_input", "disabled"), True, False),
         (Output("home_merge_gap_input", "disabled"), True, False),
         (Output("home_relative_height_input", "disabled"), True, False),
         (Output("home_get_results_btn", "disabled"), True, False),
@@ -1055,13 +1205,17 @@ def home_apply_dtw(
 )
 def home_update_dtw(
     diff_std: float,
+    number_of_segments: int,
+    quantity_mean_std: int,
+    weight: float,
+    avoid_border: float,
     gap: int,
     relative_height: float,
     loaded_data: dict,
     fig: dict,
     dtw_data: dict,
     search: str
-) -> tuple[Patch, dict]:
+) -> tuple[Patch, dict, int, int]:
     """
     Function responsible for reapplying the DTW algorithm and updating the background graph data
     given changes on the `diff_std`, `gap` or `relative_height` values, plotting into the `home_background_graph`
@@ -1071,6 +1225,18 @@ def home_update_dtw(
     ----------
     diff_std : float
         The multiplier of the standard deviation to be used to find peaks.
+
+    number_of_segments : int
+        Number of segments that the curve will be divided for analysing.
+
+    quantity_mean_std : int
+        Number of stds selected from segments to take the mean.
+
+    weight : float
+        The weight for the DTW distances.
+
+    avoid_border : float
+        Value to not consider border (0 - 30)%.
 
     gap : int
         The distance of points to merge peaks if they are too close to each other.
@@ -1131,11 +1297,21 @@ def home_update_dtw(
         A dict with the list of all positive and negative peaks::
 
             {
-                "pos": list of list of tuple[float, float]
-                    A list with all the positive peaks (tuples) of all curves.
-                "neg": list of list of tuple[float, float]
-                    A list with all the negative peaks (tuples) of all curves.
+                "pos": dict
+                    - "interval": list of tuples [(start, end), ...]
+                    - "weight": float, weight of this interval (0-100)
+                    - "curve": any, identifier of the curve
+                "neg": dict
+                    - "interval": list of tuples [(start, end), ...]
+                    - "weight": float, weight of this interval (0-100)
+                    - "curve": any, identifier of the curve
             }
+
+    int
+        Max value possible for quantity_mean_std in case number_of_segments changed.
+
+    int
+        New value for quantity_mean_std in case number_of_segments changed and now is lower than the first.
     """
     # --- Getting language of the page ---
 
@@ -1146,8 +1322,8 @@ def home_update_dtw(
     else:
         translated = TRANSLATIONS["pt"]
 
-    target_alinhada = fig["data"][0]["y"]
-    curvas_alinhadas = [data["y"] for data in fig["data"][1:]]
+    target_alinhada = fig["data"][6]["y"]
+    curvas_alinhadas = [data["y"] for data in fig["data"][:6]]
     smooth_value = dtw_data["smooth_window"]
     resultados = dtw_data["resultados"]
 
@@ -1175,15 +1351,27 @@ def home_update_dtw(
 
     ranges = [[0.85, 1], [0.68, 0.84], [0.51, 0.67], [0.34, 0.5], [0.17, 0.33], [0, 0.16]]
 
+    total_dist = sum(1 / x[1]**weight for x in distancias_sorted)
+
+    # Validating the quantity_mean_std if number_of_segments was changed:
+    if number_of_segments < quantity_mean_std:
+        quantity_mean_std = number_of_segments
+
     for i, (idx, dist) in enumerate(distancias_sorted):
         diff = curvas_diff[i]
-        patched_figure["data"][i*3]["y"] = diff
-        patched_figure["data"][i*3]["name"] = f"[TARGET] {target_day} - {translated['graphs']['curve']} {curve_days[idx]} (FastDTW={dist:.2f})"
-        patched_figure["data"][(i*3)+1]["y"] = [np.std(diff) * diff_std, np.std(diff) * diff_std]
-        patched_figure["data"][(i*3)+2]["y"] = [-(np.std(diff) * diff_std), -(np.std(diff) * diff_std)]
 
-        peaks_pos, _ = find_peaks(diff, height=np.std(diff) * diff_std, threshold = 0)
-        peaks_neg, _ = find_peaks(-diff, height=np.std(diff) * diff_std, threshold = 0)
+        # Ignore first and last % of the curve
+        cut = int((avoid_border/100) * len(diff))
+        diff[:cut] = 0
+        diff[-cut:] = 0
+
+        curve_std = find_std(diff, number_of_segments, quantity_mean_std)
+
+        patched_figure["data"][(i*3)+1]["y"] = [curve_std * diff_std, curve_std * diff_std]
+        patched_figure["data"][(i*3)+2]["y"] = [-(curve_std * diff_std), -(curve_std * diff_std)]
+
+        peaks_pos, _ = find_peaks(diff, height=curve_std * diff_std, threshold = 0)
+        peaks_neg, _ = find_peaks(-diff, height=curve_std * diff_std, threshold = 0)
 
         intervals_pos = []
         intervals_neg = []
@@ -1199,8 +1387,20 @@ def home_update_dtw(
         merged_pos = merge_intervals(intervals_pos, gap=gap)
         merged_neg = merge_intervals(intervals_neg, gap=gap)
 
-        intervals_all_pos.append(merged_pos)
-        intervals_all_neg.append(merged_neg)
+        intervals_all_pos.append(
+            {
+                "interval": merged_pos,
+                "weight": (1 / dist**weight) / total_dist * 100,
+                "curve": idx
+            }
+        )
+        intervals_all_neg.append(
+            {
+                "interval": merged_neg,
+                "weight": (1 / dist**weight) / total_dist * 100,
+                "curve": idx
+            }
+        )
 
         for start, end in merged_pos:
             shapes.append(
@@ -1245,7 +1445,7 @@ def home_update_dtw(
         "neg": intervals_all_neg,
     }
 
-    return patched_figure, all_peaks
+    return patched_figure, all_peaks, number_of_segments, quantity_mean_std
 
 
 @callback(
@@ -1269,6 +1469,10 @@ def home_update_dtw(
         (Output("home_apply_dtw_btn", "disabled"), True, False),
         (Output("home_diff_std_input", "disabled"), True, False),
         (Output("home_min_curves_input", "disabled"), True, False),
+        (Output("home_number_of_segments_input", "disabled"), True, False),
+        (Output("home_quantity_mean_std_input", "disabled"), True, False),
+        (Output("home_dtw_weight_input", "disabled"), True, False),
+        (Output("home_avoid_border_input", "disabled"), True, False),
         (Output("home_merge_gap_input", "disabled"), True, False),
         (Output("home_relative_height_input", "disabled"), True, False),
         (Output("home_get_results_btn", "disabled"), True, False),
@@ -1297,10 +1501,14 @@ def home_get_results(
         A dict with the list of all positive and negative peaks::
 
             {
-                "pos": list of list of tuple[float, float]
-                    A list with all the positive peaks (tuples) of all curves.
-                "neg": list of list of tuple[float, float]
-                    A list with all the negative peaks (tuples) of all curves.
+                "pos": dict
+                    - "interval": list of tuples [(start, end), ...]
+                    - "weight": float, weight of this interval (0-100)
+                    - "curve": any, identifier of the curve
+                "neg": dict
+                    - "interval": list of tuples [(start, end), ...]
+                    - "weight": float, weight of this interval (0-100)
+                    - "curve": any, identifier of the curve
             }
 
     loaded_data: dict
@@ -1383,8 +1591,8 @@ def home_get_results(
     curve_data_list = loaded_data["curves"]["data_list"]
     datetime_list, datetime_str = generate_datetime_list(target_table)
 
-    common_pos = find_common_intervals_precise(peaks_intervals["pos"], min_curves)
-    common_neg = find_common_intervals_precise(peaks_intervals["neg"], min_curves)
+    common_pos = find_common_intervals_weighted(peaks_intervals["pos"], min_curves)
+    common_neg = find_common_intervals_weighted(peaks_intervals["neg"], min_curves)
 
     # --- Results ---
 
@@ -1400,47 +1608,56 @@ def home_get_results(
 
     curves_raw_interp = [interpolate_curve(curve, target_len) for curve in curve_data_list]
     curves_raw_smooth = [apply_smooth(curve, smooth_window, n_apply_smooth) for curve in curves_raw_interp]
-    background_curve = np.median(curves_raw_smooth, axis=0)
-    background_subtracted = np.array(target_data) - np.array(background_curve)
 
     # --- Getting logs ---
 
     shapes = []
     logs = []
     background_curves = []
+    index = 0
 
-    for idx, (start, end) in enumerate(common_pos):
-        logs.append(
-            dbc.ListGroupItem(
-                f"{translated["logs"]["possible_flare"]}: {datetime_str[int(start)]} - {datetime_str[int(end)]}",
-                id={"type": "possible_flare", "index": idx},
-                className="home-results-log-up"
-            ),
-        )
-        shapes.append(
-            {
-                "type": "rect",
-                "xref": "x",
-                "yref": "paper",
-                "x0": datetime_str[int(start)],
-                "x1": datetime_str[int(end)],
-                "y0": 0,
-                "y1": 1,
-                "fillcolor": "cyan",
-                "opacity": 0.3,
-                "line": {"width": 0},
-            }
-        )
-        start_time = max(0, start - 1000)
-        end_time = min(len(datetime_str), end + 1000)
-        background_curves.append(
-            {
-                "x": datetime_str[int(start_time):int(end_time)],
-                "y": background_subtracted[int(start_time):int(end_time)]
-            }
-        )
+    for idx, ((start, end), curves) in enumerate(common_pos):
+        curves_raw_smooth_array = np.stack(curves_raw_smooth)
+        background_curve = np.median(curves_raw_smooth_array[curves, :], axis=0)
+        background_subtracted = np.array(target_data) - np.array(background_curve)
 
-    for start, end in common_neg:
+        extra_time = len(datetime_str[int(start):int(end)])/2
+        start_time = max(0, start - extra_time)
+        end_time = min(len(datetime_str), end + extra_time)
+
+        if not is_linear_curve(background_subtracted[int(start_time):int(end_time)]):
+            logs.append(
+                dbc.ListGroupItem(
+                    f"{translated["logs"]["possible_flare"]}: {datetime_str[int(start)]} - {datetime_str[int(end)]}",
+                    id={"type": "possible_flare", "index": index},
+                    className="home-results-log-up"
+                ),
+            )
+            shapes.append(
+                {
+                    "type": "rect",
+                    "xref": "x",
+                    "yref": "paper",
+                    "x0": datetime_str[int(start)],
+                    "x1": datetime_str[int(end)],
+                    "y0": 0,
+                    "y1": 1,
+                    "fillcolor": "cyan",
+                    "opacity": 0.3,
+                    "line": {"width": 0},
+                }
+            )
+
+            background_curves.append(
+                {
+                    "x": datetime_str[int(start_time):int(end_time)],
+                    "y": background_subtracted[int(start_time):int(end_time)]
+                }
+            )
+
+            index += 1
+    
+    for (start, end), _ in common_neg:
         logs.append(
             dbc.ListGroupItem(
                 f"{translated["logs"]["possible_problem"]}: {datetime_str[int(start)]} - {datetime_str[int(end)]}",
@@ -1537,14 +1754,17 @@ def home_load_possible_flare(nc1: list[int], events_data: dict) -> Patch:
     Patch
         A patched figure to update the curve of the result background graph given a possible event.
     """
-    if any(events_data):
-        triggered_id = callback_context.triggered_id
-        idx = int(triggered_id["index"])
+    try:
+        if any(events_data):
+            triggered_id = callback_context.triggered_id
+            idx = int(triggered_id["index"])
 
-        patched_figure = Patch()
+            patched_figure = Patch()
 
-        patched_figure["data"][0]["x"] = events_data[idx]["x"]
-        patched_figure["data"][0]["y"] = events_data[idx]["y"]
+            patched_figure["data"][0]["x"] = events_data[idx]["x"]
+            patched_figure["data"][0]["y"] = events_data[idx]["y"]
 
-        return patched_figure
-    return no_update
+            return patched_figure
+        return no_update
+    except:
+        return no_update
