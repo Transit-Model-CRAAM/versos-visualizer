@@ -6,6 +6,15 @@ __pycache__/
 .venv/
 venv/
 
+# Backups folder
+backups/
+data/
+solar_data/
+validation_data/
+temp/
+database/
+
+
 # Packaging
 build/
 dist/
