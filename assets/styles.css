@@ -181,8 +181,42 @@ html, body {
 }
 
 .home-results-log-up {
-    background-color: #b5fbfb;
-    cursor: pointer;
+    display: flex;
+    justify-content: start;
+    align-items: flex-end;
+    gap: 0.5rem;
+    background-color: #ffefc8;
+}
+
+.home-results-btn {
+    height: 35px;
+    width: 50px;
+}
+
+.home-results-move-btn {
+    height: 20px !important;
+}
+
+.home-results-btn:disabled svg {
+    color: var(--button-text-disabled-color) !important;
+}
+
+.home-move-buttons-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.home-add-log-container {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    width: 100%;
+}
+
+.home-add-log-container > *:first-child {
+    flex: 1 1 0%;
+    min-width: 0;
 }
 
 .home-results-log-down {
@@ -200,6 +234,55 @@ html, body {
 .home-download-select {
     flex: 1;
 }
+
+/* .home-date-input {
+    flex: 4 4 40%;
+}
+
+.home-data-type-select {
+    flex: 2 2 25%;
+}
+
+.home-interpolation-type-select {
+    flex: 3 3 35%;
+} */
+
+.logs-checkboxes-container {
+    display: flex;
+    flex-direction: column; /* Empilha os itens verticalmente */
+    gap: 0.5rem;            /* Mantém o espaçamento entre eles */
+}
+
+.logs-checkbox input:disabled:not(:checked) {
+    cursor: default;
+    background-color: white;
+}
+
+.logs-checkbox input:disabled:checked {
+    cursor: default;
+    background-color: var(--button-color);
+}
+
+.logs-checkbox:has(input:disabled) .mantine-Checkbox-icon {
+    color: var(--button-text-color);
+}
+
+.logs-checkbox-changed input:disabled:checked {
+    cursor: default;
+    background-color: var(--button-clicked-color);
+}
+
+.logs-checkbox-changed:has(input:disabled) .mantine-Checkbox-icon {
+    color: var(--button-text-color);
+}
+
+.logs-offset {
+    width: 125px !important;
+}
+
+/* .logs-curve {
+    width: 340px !important;
+} */
 
 /* GRAPHS HEIGHT */
 

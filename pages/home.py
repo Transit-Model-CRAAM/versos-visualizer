@@ -20,22 +20,24 @@ from dash import (
 import dash_mantine_components as dmc
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
+from datetime import datetime, timedelta
+from dash_iconify import DashIconify
 from scipy.signal import find_peaks, peak_widths
 from urllib.parse import parse_qs
 
 from src.components.cards import generate_card
+from src.components.logs import generate_new_log
 from src.functions.data_treatment import *
+from src.functions.data_validation import *
+from src.functions.database import *
 from src.constants.graph import *
 from src.constants.translations import TRANSLATIONS
 
 register_page(__name__, path="/")
 
 def layout(**kwargs):
-    with open("assets/sun_spinning.gif", "rb") as f:
-        encoded = base64.b64encode(f.read()).decode()
-
-    if kwargs.get("lang") and kwargs.get("lang") == "en":
-        lang = "en"
+    if kwargs.get("lang") and kwargs.get("lang") in TRANSLATIONS:
+        lang = kwargs.get("lang")
     else:
         lang = "pt"
     translated = TRANSLATIONS[lang]
@@ -64,41 +66,37 @@ def layout(**kwargs):
 
     timepicker_card = html.Div(
         [
-            # dmc.DateInput(
-            #     id="home_date_input",
-            #     label=translated["components"]["date_input"]["label"],
-            #     # description=translated["components"]["date_input"]["description"],
-            #     minDate="2012-01-24",
-            #     maxDate="2012-01-30",
-            #     className="custom-input",
-            # ),
             dmc.DateInput(
                 id="home_date_input",
                 label=translated["components"]["date_input"]["label"],
                 # description=translated["components"]["date_input"]["description"],
-                minDate="2012-07-04",
-                maxDate="2012-07-27",
-                className="custom-input",
+                minDate="2011-01-01",
+                maxDate="2022-07-27",
+                className="custom-input home-date-input",
             ),
-            # dmc.DateInput(
-            #     id="home_date_input",
-            #     label=translated["components"]["date_input"]["label"],
-            #     # description=translated["components"]["date_input"]["description"],
-            #     minDate="2012-01-01",
-            #     maxDate="2012-01-07",
-            #     className="custom-input",
-            # ),
             dmc.Select(
                 id="home_data_select",
                 label=translated["components"]["data_select"],
-                value="4",
+                value="TBL45",
                 data=[
-                    {"value": "4", "label": "TBL_45"},
-                    {"value": "5", "label": "TBR_45"},
-                    {"value": "6", "label": "TBL_90"},
-                    {"value": "7", "label": "TBR_90"},
-                ]
-            ), 
+                    {"value": "TBL45", "label": "TBL 45"},
+                    {"value": "TBR45", "label": "TBR 45"},
+                    {"value": "TBL90", "label": "TBL 90"},
+                    {"value": "TBR90", "label": "TBR 90"},
+                ],
+                className="home-data-type-select",
+            ),
+            dmc.Select(
+                id="home_interpolation_select",
+                label=translated["components"]["interpolation_select"]["label"],
+                value="original",
+                data=[
+                    {"value": "original", "label": translated["components"]["interpolation_select"]["values"]["original"]},
+                    {"value": "refined", "label": translated["components"]["interpolation_select"]["values"]["refined"]},
+                    {"value": "to_zero", "label": translated["components"]["interpolation_select"]["values"]["to_zero"]},
+                ],
+                className="home-interpolation-type-select",
+            ),
             dmc.Button(
                 translated["components"]["load_button"],
                 id="home_load_data_btn",
@@ -118,9 +116,8 @@ def layout(**kwargs):
                         loaderProps={
                             "variant": "custom",
                             "children": dmc.Image(
-                                h=100,
-                                radius="md",
-                                src=f"data:image/gif;base64,{encoded}",
+                                src="/assets/sol.svg",
+                                h=200,
                             ),
                         },
                         overlayProps={"radius": "sm", "blur": 2},
@@ -175,9 +172,8 @@ def layout(**kwargs):
                 loaderProps={
                     "variant": "custom",
                     "children": dmc.Image(
-                        h=100,
-                        radius="md",
-                        src=f"data:image/gif;base64,{encoded}",
+                        src="/assets/sol.svg",
+                        h=200,
                     ),
                 },
                 overlayProps={"radius": "sm", "blur": 2},
@@ -255,7 +251,7 @@ def layout(**kwargs):
                         label=translated["components"]["avoid_border"],
                         id="home_avoid_border_input",
                         value=6,
-                        min=0,
+                        min=0.01,
                         max=30,
                         disabled=True,
                         debounce=True,
@@ -316,6 +312,7 @@ def layout(**kwargs):
                                 [
                                     dmc.TabsTab(translated["components"]["results_tab"]["results"], value="result"),
                                     dmc.TabsTab(translated["components"]["results_tab"]["background_curve"], value="background"),
+                                    dmc.TabsTab(translated["components"]["results_tab"]["day"], value="day"),
                                 ]
                             ),
                             dmc.TabsPanel(
@@ -327,9 +324,8 @@ def layout(**kwargs):
                                                 loaderProps={
                                                     "variant": "custom",
                                                     "children": dmc.Image(
-                                                        h=100,
-                                                        radius="md",
-                                                        src=f"data:image/gif;base64,{encoded}",
+                                                        src="/assets/sol.svg",
+                                                        h=200,
                                                     ),
                                                 },
                                                 overlayProps={"radius": "sm", "blur": 2},
@@ -355,11 +351,10 @@ def layout(**kwargs):
                                             dmc.LoadingOverlay(
                                                 id="home_result_background_graph_loading_overlay",
                                                 loaderProps={
-                                                    "variant": "custom",
+                                                    "variant": "custom",         
                                                     "children": dmc.Image(
-                                                        h=100,
-                                                        radius="md",
-                                                        src=f"data:image/gif;base64,{encoded}",
+                                                        src="/assets/sol.svg",
+                                                        h=200,
                                                     ),
                                                 },
                                                 overlayProps={"radius": "sm", "blur": 2},
@@ -378,12 +373,66 @@ def layout(**kwargs):
                                 value="background",
                                 className="home-results-graph",
                             ),
+                            dmc.TabsPanel(
+                                [
+                                    html.Div(
+                                        [
+                                            dmc.LoadingOverlay(
+                                                id="home_result_day_graph_loading_overlay",
+                                                loaderProps={
+                                                    "variant": "custom",
+                                                    "children": dmc.Image(
+                                                        src="/assets/sol.svg",
+                                                        h=200,
+                                                    ),
+                                                },
+                                                overlayProps={"radius": "sm", "blur": 2},
+                                                visible=False,
+                                                zIndex=10,
+                                            ),
+                                            dcc.Graph(
+                                                id="home_results_day_graph",
+                                                config=PLOT_CONFIG,
+                                                figure=generate_result_fig_properties(lang),
+                                            )
+                                        ],
+                                        className="home-results-graph"
+                                    ),
+                                ],
+                                value="day",
+                                className="home-results-graph",
+                            ),
                         ],
                         value="result",
+                        id="home_results_tabs",
                         className="home-results-graph",
                     ),
                 ],
                 className="results-graph-contents",
+            ),
+            html.Div(
+                [
+                    dmc.MultiSelect(
+                        id="home_results_add_new_log_multiselect",
+                        label=translated["logs"]["add_log_label"],
+                        value=[],
+                        data=[],
+                        disabled=True,
+                        className="home-results-add-log-multiselect"
+                    ),
+                    dmc.ActionIcon(
+                        [
+                            DashIconify(
+                                icon="mdi:add-bold",
+                                color="#FFFFFF",
+                            )
+                        ],
+                        className="home-results-btn button-style",
+                        id="home_results_add_new_log_btn",
+                        disabled=True,
+                    ),
+                ],
+                className="same-line home-add-log-container"
             ),
             html.Div(
                 [
@@ -392,9 +441,8 @@ def layout(**kwargs):
                         loaderProps={
                             "variant": "custom",
                             "children": dmc.Image(
-                                h=100,
-                                radius="md",
-                                src=f"data:image/gif;base64,{encoded}",
+                                src="/assets/sol.svg",
+                                h=150,
                             ),
                         },
                         overlayProps={"radius": "sm", "blur": 2},
@@ -415,10 +463,10 @@ def layout(**kwargs):
                     dmc.Select(
                         id="home_download_extension_select",
                         label=translated["components"]["download_select"]["label"],
-                        value="pdf",
+                        value="db",
                         data=[
-                            {"value": "pdf", "label": translated["components"]["download_select"]["values"]["pdf"]},
-                            {"value": "csv", "label": translated["components"]["download_select"]["values"]["csv"]},
+                            {"value": key, "label": value}
+                            for key, value in translated["components"]["download_select"]["values"].items()
                         ],
                         comboboxProps={"position": "top", "middlewares": {"flip": False, "shift": False}},
                         className="home-download-select"
@@ -442,6 +490,13 @@ def layout(**kwargs):
             dcc.Store(id="home_dtw_result_data"),
             dcc.Store(id="home_peaks_intervals"),
             dcc.Store(id="home_events_data"),
+            dcc.Store(id="home_reassign_log_index"),
+        ]
+    )
+
+    page_notification_container = html.Div(
+        [
+            dmc.NotificationContainer(id="home_notification_container")
         ]
     )
 
@@ -460,6 +515,19 @@ def layout(**kwargs):
 
     return html.Div(
         [
+            dmc.LoadingOverlay(
+                id="home_screen_loading_overlay",
+                loaderProps={
+                    "variant": "custom",
+                    "children": dmc.Image(
+                        src="/assets/sol.svg",
+                        h=200,
+                    ),
+                },
+                overlayProps={"radius": "sm", "blur": 2},
+                visible=False,
+                zIndex=10,
+            ),
             html.Div(
                 [
                     generate_card(logo_card, "logo-card"),
@@ -482,6 +550,7 @@ def layout(**kwargs):
                 className="home-page-card-width"
             ),
             page_store,
+            page_notification_container,
             dcc.Location(id="url"),
         ],
         className="same-line page-container"
@@ -530,30 +599,27 @@ def home_enable_load_data_btn(date: str) -> bool:
 
     return True
 
-def to_list(arr):
-    return np.ascontiguousarray(arr).tolist()
-def fits_table_to_list_of_lists(fits_table):
-    return [list(row) for row in fits_table]
 
 @callback(
     Output("home_data_graph", "figure"),
     Output("home_background_graph", "figure"),
     Output("home_results_graph", "figure"),
     Output("home_results_background_graph", "figure"),
+    Output("home_results_day_graph", "figure"),
     Output("home_graph_raw_data", "data"),
     Output("home_results_log", "children"),
+    Output("home_results_add_new_log_multiselect", "data"),
+    Output("home_results_add_new_log_multiselect", "value"),
+    Output("home_notification_container", "sendNotifications"),
     Input("home_load_data_btn", "n_clicks"),
     State("home_data_select", "value"),
+    State("home_interpolation_select", "value"),
     State("home_smooth_window_input", "value"),
     State("home_n_apply_smooth_input", "value"),
     State("home_date_input", "value"),
     State("url", "search"),
     running=[
-        (Output("home_data_graph_loading_overlay", "visible"), True, False),
-        (Output("home_background_graph_loading_overlay", "visible"), True, False),
-        (Output("home_result_graph_loading_overlay", "visible"), True, False),
-        (Output("home_result_background_graph_loading_overlay", "visible"), True, False),
-        (Output("home_result_log_loading_overlay", "visible"), True, False),
+        (Output("home_screen_loading_overlay", "visible"), True, False),
         (Output("home_load_data_btn", "disabled"), True, False),
         (Output("home_smooth_window_input", "disabled"), True, False),
         (Output("home_n_apply_smooth_input", "disabled"), True, False),
@@ -568,17 +634,20 @@ def fits_table_to_list_of_lists(fits_table):
         (Output("home_relative_height_input", "disabled"), True, True),
         (Output("home_get_results_btn", "disabled"), True, True),
         (Output("home_download_button", "disabled"), True, True),
+        (Output("home_results_add_new_log_multiselect", "disabled"), True, True),
+        (Output("home_results_add_new_log_btn", "disabled"), True, True),
     ],
     prevent_initial_call=True,
 )
 def home_load_data(
     nc1: int,
-    data_select: int,
+    data_select: str,
+    interpolation_select: str,
     smooth_window: int,
     n_apply_smooth: int,
     date: str,
     search: str,
-) -> tuple[Patch, dict, dict, dict, dict, list]:
+) -> tuple[Patch, dict, dict, dict, dict, dict, list, list, list]:
     """
     Function responsible for loading the data, plotting into the `home_data_graph` and storing
     the raw data of all curves inside the store `home_graph_raw_data`.
@@ -588,13 +657,20 @@ def home_load_data(
     nc1 : int
         Input for when load data button is clicked.
 
-    data_select : int
+    data_select : str
         The position of the curve to be loaded in the fits file. Possible values are::
 
-            4 -> "TBL_45"
-            5 -> "TBR_45"
-            6 -> "TBL_90"
-            7 -> "TBR_90"
+            - "TBL45"
+            - "TBR45"
+            - "TBL90"
+            - "TBR90"
+
+    interpolation_select : str
+        The type of interpolation to be applied to the curves. Possible values are::
+
+            - "original": a "not so good" interpolation for data retrieval, but better for flare detection.
+            - "refined": a right interpolation of data, but sometimes it can oversmooth important features.
+            - "to_zero": a interpolation that forces gaps to be 0.
 
     smooth_window : int
         Number of neighbours to apply the smoothing.
@@ -623,6 +699,9 @@ def home_load_data(
         FIG_PROPERTIES to reset the results background graph.
 
     dict
+        FIG_PROPERTIES to reset the results day graph.
+
+    dict
         The loaded data of the curves::
 
             {
@@ -637,6 +716,8 @@ def home_load_data(
                 "curves": {
                     "data_list": list of list of float
                         X-axis data of the curves to be compared.
+                    "data_times": list of Datetimes
+                        A list for the datetimes of the curves to be compared.
                     "days": list ofstr
                         The day of each curve.
                 }
@@ -644,45 +725,77 @@ def home_load_data(
 
     list
         Empty list to reset the results log.
+
+    list
+        List of days for the add log multiselect.
+
+    list
+        Empty list to reset the add log multiselect.
     """
     # --- Getting language of the page ---
 
     query_params = parse_qs(search.lstrip("?"))  # remove "?" and parse
     lang = query_params.get("lang", ["not recognized"])[0]
-    if lang == "en":
-        translated = TRANSLATIONS["en"]
-    else:
+    try:
+        translated = TRANSLATIONS[lang]
+    except:
         lang = "pt"
         translated = TRANSLATIONS["pt"]
-        
-    # TODO: This is hardcoded for now. Deal with it in the future
-    all_files = [
-        os.path.join("data", "D24.fits"),
-        os.path.join("data", "D25.fits"),
-        os.path.join("data", "D26.fits"),
-        os.path.join("data", "D27.fits"),
-        os.path.join("data", "D28.fits"),
-        os.path.join("data", "D29.fits"),
-        os.path.join("data", "D30.fits"),
-    ]
 
-    all_files = [
-        os.path.join("data", f"D{int(date[-2:])-3:02d}.fits"),
-        os.path.join("data", f"D{int(date[-2:])-2:02d}.fits"),
-        os.path.join("data", f"D{int(date[-2:])-1:02d}.fits"),
-        os.path.join("data", f"D{int(date[-2:]):02d}.fits"),
-        os.path.join("data", f"D{int(date[-2:])+1:02d}.fits"),
-        os.path.join("data", f"D{int(date[-2:])+2:02d}.fits"),
-        os.path.join("data", f"D{int(date[-2:])+3:02d}.fits"),
-    ]
+    all_files, target_file_to_load = prepare_versos_dataset(target_date_str=date)
 
-    target_file_to_load = os.path.join("data", f"D{int(date[-2:]):02d}.fits")
+    if target_file_to_load is None:
+        notification = [dict(
+            id="date_not_found_notification",
+            title = translated["notifications"]["date_not_found"]["title"],
+            message = translated["notifications"]["date_not_found"]["message"],
+            color = "red",
+            action = "show",
+            autoClose=10000,
+            position="top-center",
+        )]
+        return (
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+            notification,
+        )
+    
+    if len(all_files) < 6:
+        notification = [dict(
+            id="not_enough_curves_notification",
+            title = translated["notifications"]["not_enough_curves"]["title"],
+            message = translated["notifications"]["not_enough_curves"]["message"],
+            color = "red",
+            action = "show",
+            autoClose=10000,
+            position="top-center",
+        )]
+        return (
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+            notification,
+        )
 
     curve_data_list = []
     curve_days = []
+    curve_tables = []
 
     for file in all_files:
-        data, full_table, day = load_fits_data(file, int(data_select))
+        data, full_table, day = load_fits_data(file, data_select)
 
         if file == target_file_to_load:
             target_data = data
@@ -692,6 +805,7 @@ def home_load_data(
 
         curve_data_list.append(data)
         curve_days.append(day)
+        curve_tables.append(full_table)
 
     loaded_data = {
         "target": {
@@ -701,32 +815,87 @@ def home_load_data(
         },
         "curves": {
             "data_list": [to_list(curva) for curva in curve_data_list],
+            "data_times": build_curve_time_arrays_from_target_day(
+                curve_tables,
+                target_day
+            ),
             "days": curve_days,
         }
     }
 
+    target_datetime_list, datetime_str = generate_datetime_list(loaded_data["target"]["table"])
+
     # ======== Pré-processar e interpolar todas ========
 
-    # Pré-processar todas as curvas e target
-    curvas_norm = [preprocess_curve(curva, smooth_window=smooth_window, n_apply_smooth=n_apply_smooth) for curva in curve_data_list]
-    target_data_norm = preprocess_curve(target_data, smooth_window=smooth_window, n_apply_smooth=n_apply_smooth)
+    # Pré-processar todas as curvas e target (Z-score + Smooth)
+    results = [
+        preprocess_curve(
+            curva,
+            curva_datetimes,
+            smooth_window=smooth_window,
+            n_apply_smooth=n_apply_smooth,
+            target=False
+        )
+        for curva, curva_datetimes in zip(curve_data_list, loaded_data["curves"]["data_times"])
+    ]
 
-    # Definir tamanho alvo para interpolação (pode ser o da curva target)
+    # unpack dos resultados em duas listas
+    curvas_norm, treated_curves_datetime = zip(*results)
+
+    # Opcional: Converter para listas (o zip retorna tuplas por padrão)
+    curvas_norm = list(curvas_norm)
+    treated_curves_datetime = list(treated_curves_datetime)
+    
+    target_data_norm, _ = preprocess_curve(target_data, smooth_window=smooth_window, n_apply_smooth=n_apply_smooth)
+
+    # Definir tamanho alvo para interpolação
     target_len = len(target_data_norm)
 
-    # Interpolar todas para o mesmo tamanho
-    curvas_interp = [interpolate_curve(curva, target_len) for curva in curvas_norm]
-    target_data_interp = interpolate_curve(target_data_norm, target_len)
+    # Interpolar todas para o mesmo tamanho (Injetando 0.0 nos gaps se refined)
+    if interpolation_select == "original":
+        curvas_interp = [interpolate_curve(curva, target_len) for curva in curvas_norm]
+        target_data_interp = interpolate_curve(target_data_norm, target_len)
+    elif interpolation_select == "refined":
+        curvas_interp = [
+            interpolate_curve_to_target_time(
+                target_datetime_list,
+                curve_datetime_list,
+                curva_norm,
+            )
+            for curva_norm, curve_datetime_list in zip(
+                curvas_norm, treated_curves_datetime
+            )
+        ]
+        target_data_interp = target_data_norm
+    elif interpolation_select == "to_zero":
+        curvas_interp = [
+            interpolate_gated_to_zero(
+                target_datetime_list,
+                curve_datetime_list,
+                curva_norm,
+            )
+            for curva_norm, curve_datetime_list in zip(
+                curvas_norm, treated_curves_datetime
+            )
+        ]
+        target_data_interp = target_data_norm
+    else:
+        curvas_interp = [interpolate_curve(curva, target_len) for curva in curvas_norm]
+        target_data_interp = interpolate_curve(target_data_norm, target_len)
 
-    # Calcular mínimo global entre todas as curvas interpoladas e target
+    # Calcular mínimo global entre todas as curvas e target
     todos_valores = np.concatenate(curvas_interp + [target_data_interp])
     min_global = np.min(todos_valores)
 
-    # Ajustar curvas para que mínimo global seja 0
-    curvas_alinhadas = [curva - min_global for curva in curvas_interp]
-    target_alinhada = target_data_interp - min_global
+    # Ajustar curvas para que mínimo global seja 0 e restaurar gaps
+    curvas_alinhadas = []
+    for curva in curvas_interp:
+        c_shifted = curva - min_global
+        if interpolation_select == "to_zero":
+            c_shifted[curva == 0] = 0
+        curvas_alinhadas.append(c_shifted)
 
-    _, datetime_str = generate_datetime_list(loaded_data["target"]["table"])
+    target_alinhada = target_data_interp - min_global
 
     patched_figure = Patch()
 
@@ -759,7 +928,23 @@ def home_load_data(
         )
     )
 
-    return patched_figure, generate_background_fig_properties(lang), generate_result_fig_properties(lang), generate_result_fig_properties(lang), loaded_data, []
+    events_data = [
+        {"value": f"{idx}", "label": f"{curve_day_label}"}
+        for idx, curve_day_label in enumerate(curve_days)
+    ]
+
+    return (
+        patched_figure,
+        generate_background_fig_properties(lang),
+        generate_result_fig_properties(lang),
+        generate_result_fig_properties(lang),
+        generate_result_fig_properties(lang),
+        loaded_data,
+        [],
+        events_data,
+        [],
+        no_update,
+    )
 
 @callback(
     Output("home_data_graph", "figure", allow_duplicate=True),
@@ -792,22 +977,24 @@ def home_update_data(
     n_apply_smooth : int
         Number of iterations to apply the smoothing with `smooth_window` neighbours.
 
-    loaded_data: dict
+    loaded_data : dict
         The loaded data of the curves::
 
             {
                 "target": {
-                    "data": list of float
+                    "data": list[float]
                         X-axis data of the target curve.
-                    "table": Fits table
-                        The FITS table of the target curve.
+                    "table": list[list]
+                        The FITS table of the target curve (as list of lists).
                     "day": str
                         The day of the target curve.
                 },
                 "curves": {
-                    "data_list": list of list of float
+                    "data_list": list[list[float]]
                         X-axis data of the curves to be compared.
-                    "days": list of str
+                    "data_times": list[np.ndarray]
+                        A list for the datetimes of the curves to be compared.
+                    "days": list[str]
                         The day of each curve.
                 }
             }
@@ -885,6 +1072,8 @@ def home_update_data(
         (Output("home_merge_gap_input", "disabled"), True, False),
         (Output("home_relative_height_input", "disabled"), True, False),
         (Output("home_get_results_btn", "disabled"), True, False),
+        (Output("home_results_add_new_log_multiselect", "disabled"), True, True),
+        (Output("home_results_add_new_log_btn", "disabled"), True, True),
     ],
     prevent_initial_call=True,
 )
@@ -914,10 +1103,13 @@ def home_apply_dtw(
         Input for when apply DTW button is clicked.
 
     fig : dict
-        The current state of the graph figure of `home_data_graph`.
+        The current state of the graph figure of `home_data_graph`::
+
             {
-                "data": ...
-                "layout": ...
+                "data": list[dict]
+                    List of trace dictionaries.
+                "layout": dict
+                    Layout configuration.
             }
 
     diff_std : float
@@ -944,28 +1136,27 @@ def home_apply_dtw(
     smooth_value : int
         Number of neighbours to apply the smoothing.
     
-    "n_apply_smooth": int
+    n_apply_smooth : int
         Number of iterations to apply the smoothing with `smooth_window` neighbours.
 
-    date: str
-        The date of the curve to be analyzed (YYYY-MM-DD format).
-
-    loaded_data: dict
+    loaded_data : dict
         The loaded data of the curves::
 
             {
                 "target": {
-                    "data": list of float
+                    "data": list[float]
                         X-axis data of the target curve.
-                    "table": Fits table
-                        The FITS table of the target curve.
+                    "table": list[list]
+                        The FITS table of the target curve (as list of lists).
                     "day": str
                         The day of the target curve.
                 },
                 "curves": {
-                    "data_list": list of list of float
+                    "data_list": list[list[float]]
                         X-axis data of the curves to be compared.
-                    "days": list ofstr
+                    "data_times": list[np.ndarray]
+                        A list for the datetimes of the curves to be compared.
+                    "days": list[str]
                         The day of each curve.
                 }
             }
@@ -975,42 +1166,44 @@ def home_apply_dtw(
 
     Returns
     -------
-    Patch
-        A patched figure to update the curves of the background graph with the background curves.
+    tuple[Patch, dict, dict]
+        patched_figure : Patch
+            A patched figure to update the curves of the background graph with the background curves.
 
-    dict
-        A dict to store the DTW obtained data::
-        
-            {
-                "resultados": list of tuple[int, float]
-                    List of each index and distance of each curve to the target.
-                "smooth_window": int
-                    Number of neighbours used to apply the smoothing.
-                "n_apply_smooth": int
-                    Number of iterations to apply the smoothing with `smooth_window` neighbours.
-            }
+        dtw_data : dict
+            A dict to store the DTW obtained data::
+            
+                {
+                    "resultados": list[tuple[int, float]]
+                        List of each index and distance of each curve to the target.
+                    "smooth_window": int
+                        Number of neighbours used to apply the smoothing.
+                    "n_apply_smooth": int
+                        Number of iterations to apply the smoothing with `smooth_window` neighbours.
+                }
 
-    dict
-        A dict with the list of all positive and negative peaks::
+        all_peaks : dict
+            A dict with the list of all positive and negative peaks::
 
-            {
-                "pos": dict
-                    - "interval": list of tuples [(start, end), ...]
-                    - "weight": float, weight of this interval (0-100)
-                    - "curve": any, identifier of the curve
-                "neg": dict
-                    - "interval": list of tuples [(start, end), ...]
-                    - "weight": float, weight of this interval (0-100)
-                    - "curve": any, identifier of the curve
-            }
+                {
+                    "pos": dict
+                        - "interval": list of tuples [(start, end), ...]
+                        - "weight": float, weight of this interval (0-100)
+                        - "curve": any, identifier of the curve
+                    "neg": dict
+                        - "interval": list of tuples [(start, end), ...]
+                        - "weight": float, weight of this interval (0-100)
+                        - "curve": any, identifier of the curve
+                }
     """
     # --- Getting language of the page ---
 
     query_params = parse_qs(search.lstrip("?"))  # remove "?" and parse
     lang = query_params.get("lang", ["not recognized"])[0]
-    if lang == "en":
-        translated = TRANSLATIONS["en"]
-    else:
+    try:
+        translated = TRANSLATIONS[lang]
+    except:
+        lang = "pt"
         translated = TRANSLATIONS["pt"]
 
     target_alinhada = fig["data"][6]["y"]
@@ -1062,7 +1255,8 @@ def home_apply_dtw(
         patched_figure["data"][i*3]["name"] = f"[TARGET] {target_day} - {translated['graphs']['curve']} {curve_days[idx]} (FastDTW={dist:.2f})"
 
         # Ignore first and last % of the curve
-        cut = int((avoid_border/100) * len(diff))
+        safe_cut_percentage = max(avoid_border, 0.01)
+        cut = int((safe_cut_percentage/100) * len(diff))
         diff[:cut] = 0
         diff[-cut:] = 0
 
@@ -1259,6 +1453,8 @@ def home_update_dtw(
                 "curves": {
                     "data_list": list of list of float
                         X-axis data of the curves to be compared.
+                    "data_times": list of Datetimes
+                        A list for the datetimes of the curves to be compared.
                     "days": list ofstr
                         The day of each curve.
                 }
@@ -1317,9 +1513,10 @@ def home_update_dtw(
 
     query_params = parse_qs(search.lstrip("?"))  # remove "?" and parse
     lang = query_params.get("lang", ["not recognized"])[0]
-    if lang == "en":
-        translated = TRANSLATIONS["en"]
-    else:
+    try:
+        translated = TRANSLATIONS[lang]
+    except:
+        lang = "pt"
         translated = TRANSLATIONS["pt"]
 
     target_alinhada = fig["data"][6]["y"]
@@ -1346,6 +1543,7 @@ def home_update_dtw(
     target_day = loaded_data["target"]["day"]
 
     curve_days = loaded_data["curves"]["days"]
+    _, datetime_str = generate_datetime_list(loaded_data["target"]["table"])
 
     shapes = []
 
@@ -1361,7 +1559,8 @@ def home_update_dtw(
         diff = curvas_diff[i]
 
         # Ignore first and last % of the curve
-        cut = int((avoid_border/100) * len(diff))
+        safe_cut_percentage = max(avoid_border, 0.01)
+        cut = int((safe_cut_percentage/100) * len(diff))
         diff[:cut] = 0
         diff[-cut:] = 0
 
@@ -1408,8 +1607,8 @@ def home_update_dtw(
                     "type": "rect",
                     "xref": "x",
                     "yref": "paper",
-                    "x0": start,
-                    "x1": end,
+                    "x0": datetime_str[int(start)],
+                    "x1": datetime_str[int(end)],
                     "y0": ranges[i][0],
                     "y1": ranges[i][1],
                     "fillcolor": "cyan",
@@ -1426,8 +1625,8 @@ def home_update_dtw(
                     "type": "rect",
                     "xref": "x",
                     "yref": "paper",
-                    "x0": start,
-                    "x1": end,
+                    "x0": datetime_str[int(start)],
+                    "x1": datetime_str[int(end)],
                     "y0": ranges[i][0],
                     "y1": ranges[i][1],
                     "fillcolor": "red",
@@ -1451,6 +1650,7 @@ def home_update_dtw(
 @callback(
     Output("home_results_graph", "figure", allow_duplicate=True),
     Output("home_results_background_graph", "figure", allow_duplicate=True),
+    Output("home_results_day_graph", "figure", allow_duplicate=True),
     Output("home_results_log", "children", allow_duplicate=True),
     Output("home_events_data", "data"),
     Input("home_get_results_btn", "n_clicks"),
@@ -1462,7 +1662,6 @@ def home_update_dtw(
     running=[
         (Output("home_result_graph_loading_overlay", "visible"), True, False),
         (Output("home_result_background_graph_loading_overlay", "visible"), True, False),
-        (Output("home_result_log_loading_overlay", "visible"), True, False),
         (Output("home_load_data_btn", "disabled"), True, False),
         (Output("home_smooth_window_input", "disabled"), True, False),
         (Output("home_n_apply_smooth_input", "disabled"), True, False),
@@ -1477,17 +1676,19 @@ def home_update_dtw(
         (Output("home_relative_height_input", "disabled"), True, False),
         (Output("home_get_results_btn", "disabled"), True, False),
         (Output("home_download_button", "disabled"), True, False),
+        (Output("home_results_add_new_log_multiselect", "disabled"), True, False),
+        (Output("home_results_add_new_log_btn", "disabled"), True, False),
     ],
     prevent_initial_call=True,
 )
 def home_get_results(
     nc1: int,
-    peaks_intervals: float,
+    peaks_intervals: dict,
     loaded_data: dict,
     min_curves: int,
     dtw_data: dict,
     search: str,
-) -> tuple[Patch, Patch, list[dbc.ListGroupItem]]:
+) -> tuple[Patch, Patch, Patch, list, list[dict]]:
     """
     Function responsible for generating the results data and plotting into the graphs `home_results_graph` and
     `home_results_background_graph` and also displaying the logs of the peaks inside the `home_results_log` component.
@@ -1497,7 +1698,7 @@ def home_get_results(
     nc1 : int
         Input for when get results button is clicked.
 
-    peaks_intervals: dict
+    peaks_intervals : dict
         A dict with the list of all positive and negative peaks::
 
             {
@@ -1511,34 +1712,36 @@ def home_get_results(
                     - "curve": any, identifier of the curve
             }
 
-    loaded_data: dict
+    loaded_data : dict
         The loaded data of the curves::
 
             {
                 "target": {
-                    "data": list of float
+                    "data": list[float]
                         X-axis data of the target curve.
-                    "table": Fits table
+                    "table": np.recarray
                         The FITS table of the target curve.
                     "day": str
                         The day of the target curve.
                 },
                 "curves": {
-                    "data_list": list of list of float
+                    "data_list": list[list[float]]
                         X-axis data of the curves to be compared.
-                    "days": list ofstr
+                    "data_times": list[np.ndarray]
+                        A list for the datetimes of the curves to be compared.
+                    "days": list[str]
                         The day of each curve.
                 }
             }
 
-    min_curves: int
+    min_curves : int
         Number of minimum curves to have a peak at that period in time.
 
-    dtw_data: dict
+    dtw_data : dict
         A dict to store the DTW obtained data::
 
             {
-                "resultados": list of tuple[int, float]
+                "resultados": list[tuple[int, float]]
                     List of each index and distance of each curve to the target.
                 "smooth_window": int
                     Number of neighbours used to apply the smoothing.
@@ -1558,26 +1761,32 @@ def home_get_results(
     Patch
         A patched figure to update the curves of the result background graph.
 
-    list of dbc.ListGroupItem
-        A list of logs of each estimated peak (Initial time - Final time)
+    Patch
+        A patched figure to update the curves of the result day graph.
 
-    dict
-        A dict with the data of each possible flare stored in `home_events_data`::
+    list
+        A list of logs of each estimated peak (Initial time - Final time).
+
+    list[dict]
+        A list of the dicts with the data of each possible flare stored in `home_events_data`::
 
             {
-                "x": list of datetime
-                    List of the dates of the target event.
-                "y": list of float
+                "x": list[str]
+                    List of the datetime strings of the target event.
+                "y": list[float]
                     List of the intensity of the background subtraction of each event.
+                "curves": list[int]
+                    Indexes of curves used to take the median of this curve
             }
     """
     # --- Getting language of the page ---
 
     query_params = parse_qs(search.lstrip("?"))  # remove "?" and parse
     lang = query_params.get("lang", ["not recognized"])[0]
-    if lang == "en":
-        translated = TRANSLATIONS["en"]
-    else:
+    try:
+        translated = TRANSLATIONS[lang]
+    except:
+        lang = "pt"
         translated = TRANSLATIONS["pt"]
 
     # --- Getting curve data ---
@@ -1589,6 +1798,7 @@ def home_get_results(
     target_table = loaded_data["target"]["table"]
     target_day = loaded_data["target"]["day"]
     curve_data_list = loaded_data["curves"]["data_list"]
+    curve_days = loaded_data["curves"]["days"]
     datetime_list, datetime_str = generate_datetime_list(target_table)
 
     common_pos = find_common_intervals_weighted(peaks_intervals["pos"], min_curves)
@@ -1616,6 +1826,8 @@ def home_get_results(
     background_curves = []
     index = 0
 
+    day_curve = np.zeros(len(datetime_str), dtype=float)
+
     for idx, ((start, end), curves) in enumerate(common_pos):
         curves_raw_smooth_array = np.stack(curves_raw_smooth)
         background_curve = np.median(curves_raw_smooth_array[curves, :], axis=0)
@@ -1625,24 +1837,23 @@ def home_get_results(
         start_time = max(0, start - extra_time)
         end_time = min(len(datetime_str), end + extra_time)
 
+        start_time_log = datetime_str[int(start)][11:]
+        end_time_log = datetime_str[int(end)][11:]
+
         if not is_linear_curve(background_subtracted[int(start_time):int(end_time)]):
             logs.append(
-                dbc.ListGroupItem(
-                    f"{translated["logs"]["possible_flare"]}: {datetime_str[int(start)]} - {datetime_str[int(end)]}",
-                    id={"type": "possible_flare", "index": index},
-                    className="home-results-log-up"
-                ),
+                generate_new_log(translated, index, curve_days, start_time_log, end_time_log, True)
             )
             shapes.append(
                 {
                     "type": "rect",
                     "xref": "x",
                     "yref": "paper",
-                    "x0": datetime_str[int(start)],
-                    "x1": datetime_str[int(end)],
+                    "x0": datetime_str[int(start_time)],
+                    "x1": datetime_str[int(end_time)],
                     "y0": 0,
                     "y1": 1,
-                    "fillcolor": "cyan",
+                    "fillcolor": "#ffcb48",
                     "opacity": 0.3,
                     "line": {"width": 0},
                 }
@@ -1651,33 +1862,14 @@ def home_get_results(
             background_curves.append(
                 {
                     "x": datetime_str[int(start_time):int(end_time)],
-                    "y": background_subtracted[int(start_time):int(end_time)]
+                    "y": background_subtracted[int(start_time):int(end_time)],
+                    "curves": curves,
                 }
             )
 
+            day_curve[int(start_time):int(end_time)] = background_subtracted[int(start_time):int(end_time)]
+
             index += 1
-    
-    for (start, end), _ in common_neg:
-        logs.append(
-            dbc.ListGroupItem(
-                f"{translated["logs"]["possible_problem"]}: {datetime_str[int(start)]} - {datetime_str[int(end)]}",
-                className="home-results-log-down"
-            ),
-        )
-        shapes.append(
-            {
-                "type": "rect",
-                "xref": "x",
-                "yref": "paper",
-                "x0": datetime_str[int(start)],
-                "x1": datetime_str[int(end)],
-                "y0": 0,
-                "y1": 1,
-                "fillcolor": "red",
-                "opacity": 0.3,
-                "line": {"width": 0},
-            }
-        )
 
     # --- Plot ---
 
@@ -1688,7 +1880,7 @@ def home_get_results(
             y=target_data,
             x=datetime_list,
             mode='lines',
-            name=f"[TARGET] {target_day}",
+            name=f"[{translated['graphs']['original']}] {target_day}",
             line=dict(width=1, color="#bdb4fc"),
             opacity=0.5,
             hovertemplate=hover_template,
@@ -1697,7 +1889,7 @@ def home_get_results(
             y=target_y,
             x=datetime_list,
             mode='lines',
-            name=f"[TARGET] {target_day}",
+            name=f"[{translated['graphs']['smoothed']}] {target_day}",
             line=dict(width=2, color="black"),
             opacity=1,
             hovertemplate=hover_template,
@@ -1710,7 +1902,7 @@ def home_get_results(
                 y=background_curves[0]["y"],
                 x=background_curves[0]["x"],
                 mode='lines',
-                name=f"[TARGET] {target_day}",
+                name=f"{target_day}",
                 line=dict(width=2, color=BACKGROUND_LINE_COLOR),
                 opacity=1,
                 hovertemplate=hover_template,
@@ -1719,33 +1911,51 @@ def home_get_results(
 
     patched_figure["layout"]["shapes"] = shapes
 
-    return patched_figure, background_patched_figure, logs, background_curves
+    # --- Day plot ---
+
+    day_patched_figure = Patch()
+
+    day_patched_figure["data"] = [
+        go.Scatter(
+            y=day_curve,
+            x=datetime_str,
+            mode='lines',
+            name=f"{target_day}",
+            line=dict(width=2, color=BACKGROUND_LINE_COLOR),
+            opacity=1,
+            hovertemplate=hover_template,
+        ),
+    ]
+
+    return patched_figure, background_patched_figure, day_patched_figure, logs, background_curves
 
 
 @callback(
     Output("home_results_background_graph", "figure", allow_duplicate=True),
-    Input({"type": "possible_flare", "index": ALL}, "n_clicks"),
+    Input({"type": "possible_flare", "index": ALL, "id": "home_event_display_btn"}, "n_clicks"),
     State("home_events_data", "data"),
     prevent_initial_call=True,
 )
-def home_load_possible_flare(nc1: list[int], events_data: dict) -> Patch:
+def home_load_possible_flare(nc1: list[int], events_data: list[dict]) -> Patch:
     """
     Function responsible for loading the event into the background graph `home_results_background_graph`
     when clicking on a possible flare in the logs.
 
     Parameters
     ----------
-    nc1 : list of int
+    nc1 : list[int]
         List of logs for when get one of them is clicked.
 
-    events_data : dict
-        A dict with the data of each possible flare stored in `home_events_data`::
+    events_data : list[dict]
+        A list of the dicts with the data of each possible flare stored in `home_events_data`::
 
             {
-                "x": list of datetime
-                    List of the dates of the target event.
-                "y": list of float
+                "x": list[str]
+                    List of the datetime strings of the target event.
+                "y": list[float]
                     List of the intensity of the background subtraction of each event.
+                "curves": list[int]
+                    Indexes of curves used to take the median of this curve
             }
 
 
@@ -1768,3 +1978,946 @@ def home_load_possible_flare(nc1: list[int], events_data: dict) -> Patch:
         return no_update
     except:
         return no_update
+
+
+@callback(
+    Output("home_results_graph", "figure", allow_duplicate=True),
+    Output("home_results_background_graph", "figure", allow_duplicate=True),
+    Output("home_results_day_graph", "figure", allow_duplicate=True),
+    Output("home_events_data", "data", allow_duplicate=True),
+    Output({"type": "possible_flare", "index": ALL, "id": "home_event_is_automatic"}, "className"),
+    Input({"type": "possible_flare", "index": ALL, "id": "home_event_update_btn"}, "n_clicks"),
+    State({"type": "possible_flare", "index": ALL, "id": "home_event_start_time"}, "value"),
+    State({"type": "possible_flare", "index": ALL, "id": "home_event_end_time"}, "value"),
+    State({"type": "possible_flare", "index": ALL, "id": "home_event_curve_select"}, "value"),
+    State({"type": "possible_flare", "index": ALL, "id": "home_event_offset"}, "value"),
+    State({"type": "possible_flare", "index": ALL, "id": "home_event_is_automatic"}, "className"),
+    State("home_events_data", "data"),
+    State("home_graph_raw_data", "data"),
+    State("home_peaks_intervals", "data"),
+    State("home_min_curves_input", "value"),
+    State("home_dtw_result_data", "data"),
+    prevent_initial_call=True,
+)
+def home_update_flare_info(
+    nc1: list[int],
+    starts: list[str],
+    ends: list[str],
+    curve_select: list[int],
+    offset: list[int],
+    checkbox_classname: list[str],
+    events_data: list[dict],
+    loaded_data: dict,
+    peaks_intervals: dict,
+    min_curves: int,
+    dtw_data: dict,
+) -> tuple[Patch, Patch, Patch, list[dict], list[str]]:
+    """
+    Function responsible for updating the data of the flare.
+
+    Parameters
+    ----------
+    nc1 : list[int]
+        List of logs for when get one of them is clicked.
+
+    starts : list[str]
+        List of start values of all the events.
+
+    ends : list[str]
+        List of end values of all the events.
+
+    curve_select : list[int]
+        List of curve index to be used for background subtraction for all events.
+    
+    offset : list[int]
+        List of offsets to be used for background subtraction for all events.
+
+    checkbox_classname : list[str]
+        List of classnames of the automatic checkbox of all events to check if it is automatic or not.
+
+    events_data : list[dict]
+        A list of the dicts with the data of each possible flare stored in `home_events_data`::
+
+            {
+                "x": list of datetime
+                    List of the dates of the target event.
+                "y": list of float
+                    List of the intensity of the background subtraction of each event.
+                "curves": list of int
+                    Indexes of curves used to take the median of this curve
+            }
+
+    loaded_data : dict
+        The loaded data of the curves::
+
+            {
+                "target": {
+                    "data": list of float
+                        X-axis data of the target curve.
+                    "table": Fits table
+                        The FITS table of the target curve.
+                    "day": str
+                        The day of the target curve.
+                },
+                "curves": {
+                    "data_list": list of list of float
+                        X-axis data of the curves to be compared.
+                    "data_times": list of Datetimes
+                        A list for the datetimes of the curves to be compared.
+                    "days": list ofstr
+                        The day of each curve.
+                }
+            }
+
+    peaks_intervals : dict
+        A dict with the list of all positive and negative peaks::
+
+            {
+                "pos": dict
+                    - "interval": list of tuples [(start, end), ...]
+                    - "weight": float, weight of this interval (0-100)
+                    - "curve": any, identifier of the curve
+                "neg": dict
+                    - "interval": list of tuples [(start, end), ...]
+                    - "weight": float, weight of this interval (0-100)
+                    - "curve": any, identifier of the curve
+            }
+
+    min_curves : int
+        Number of minimum curves to have a peak at that period in time.
+
+    dtw_data : dict
+        A dict to store the DTW obtained data::
+
+            {
+                "resultados": list of tuple[int, float]
+                    List of each index and distance of each curve to the target.
+                "smooth_window": int
+                    Number of neighbours used to apply the smoothing.
+                "n_apply_smooth": int
+                    Number of iterations to apply the smoothing with `smooth_window` neighbours.
+            }
+
+
+    Returns
+    -------
+    tuple[Patch, Patch, Patch, list[dict], list[str]]
+        If a flare is updated, returns:
+            - results_patched_figure: Patch for the results graph
+            - background_patched_figure: Patch for the background graph
+            - day_patched_figure: Patch for the day graph
+            - events_data: Updated events data
+            - checkbox_classname: Updated checkbox classnames
+
+        If an error occurs or no update is needed, returns multiple `no_update` values.
+    """
+    try:
+        if any(events_data) and any(nc1):
+            triggered_id = callback_context.triggered_id
+            idx = int(triggered_id["index"])
+
+            checkbox_classname[idx] = "logs-checkbox-changed"
+
+            results_patched_figure = Patch()
+
+            target_day = loaded_data["target"]["day"]
+            target_data = loaded_data["target"]["data"]
+            target_table = loaded_data["target"]["table"]
+            target_datetime_list, target_datetime_str = generate_datetime_list(target_table)
+
+            results_patched_figure["layout"]["shapes"][idx]["x0"] = f"{target_day} {starts[idx]}"
+            results_patched_figure["layout"]["shapes"][idx]["x1"] = f"{target_day} {ends[idx]}"
+
+            if int(curve_select[idx]) < 6:
+                curve_data = loaded_data["curves"]["data_list"][int(curve_select[idx])]
+                curve_datetime_list = loaded_data["curves"]["data_times"][int(curve_select[idx])]
+
+                curve_aligned = interpolate_curve_to_target_time(
+                    target_datetime_list,
+                    curve_datetime_list,
+                    curve_data
+                )
+
+                background_subtracted = np.array(target_data) - np.array(curve_aligned)
+            else:
+                curve_data_list = loaded_data["curves"]["data_list"]
+
+                smooth_window = dtw_data["smooth_window"]
+                n_apply_smooth = dtw_data["n_apply_smooth"]
+
+                target_len = len(target_data)
+
+                curves = events_data[idx]["curves"]
+
+                curves_raw_interp = [interpolate_curve(curve, target_len) for curve in curve_data_list]
+                curves_raw_smooth = [apply_smooth(curve, smooth_window, n_apply_smooth) for curve in curves_raw_interp]
+                
+                curves_raw_smooth_array = np.stack(curves_raw_smooth)
+                background_curve = np.median(curves_raw_smooth_array[curves, :], axis=0)
+                background_subtracted = np.array(target_data) - np.array(background_curve)
+
+            # original strings
+            start = f"{target_day} {starts[idx]}"
+            end = f"{target_day} {ends[idx]}"
+
+            # format
+            fmt = "%Y-%m-%d %H:%M:%S"
+
+            # convert to datetime
+            start_dt = datetime.strptime(start, fmt)
+            end_dt = datetime.strptime(end, fmt)
+
+            # difference in seconds
+            extra_time = int((end_dt - start_dt).total_seconds() / 2)
+
+            # expand window
+            new_start_dt = start_dt - timedelta(seconds=extra_time)
+            new_end_dt = end_dt + timedelta(seconds=extra_time)
+
+            # convert back to string
+            new_start = new_start_dt.strftime(fmt)
+            new_end = new_end_dt.strftime(fmt)
+
+            start_idx = get_closest_datetime_index(
+                target_datetime_list,
+                new_start,
+            )
+
+            end_idx = get_closest_datetime_index(
+                target_datetime_list,
+                new_end,
+            )
+
+            events_data[idx]["x"] = target_datetime_str[int(start_idx):int(end_idx)]
+            events_data[idx]["y"] = background_subtracted[int(start_idx):int(end_idx)] - offset[idx]
+
+            background_patched_figure = Patch()
+
+            background_patched_figure["data"][0]["x"] = events_data[idx]["x"]
+            background_patched_figure["data"][0]["y"] = events_data[idx]["y"]
+
+            day_curve = np.zeros(len(target_datetime_str), dtype=float)
+
+            # Criar mapeamento tempo → índice (muito mais eficiente que .index())
+            time_to_index = {t: i for i, t in enumerate(target_datetime_str)}
+
+            for event in events_data:
+                x_vals = event["x"]
+                y_vals = event["y"]
+
+                # Pegar índices correspondentes
+                indices = [time_to_index[t] for t in x_vals]
+
+                # Atribuir valores
+                day_curve[indices] = y_vals
+
+            day_patched_figure = Patch()
+
+            day_patched_figure["data"][0]["y"] = day_curve
+
+            return results_patched_figure, background_patched_figure, day_patched_figure, events_data, checkbox_classname
+        return no_update
+    except:
+        return no_update
+
+
+@callback(
+    Output("home_results_log", "children", allow_duplicate=True),
+    Output("home_results_graph", "figure", allow_duplicate=True),
+    Output("home_events_data", "data", allow_duplicate=True),
+    Output({"type": "possible_flare", "index": ALL, "id": "home_event_start_time"}, "value", allow_duplicate=True),
+    Output({"type": "possible_flare", "index": ALL, "id": "home_event_end_time"}, "value", allow_duplicate=True),
+    Output({"type": "possible_flare", "index": ALL, "id": "home_event_curve_select"}, "value", allow_duplicate=True),
+    Output({"type": "possible_flare", "index": ALL, "id": "home_event_offset"}, "value", allow_duplicate=True),
+    Output({"type": "possible_flare", "index": ALL, "id": "home_event_is_automatic"}, "checked", allow_duplicate=True),
+    Output({"type": "possible_flare", "index": ALL, "id": "home_event_is_valid"}, "checked", allow_duplicate=True),
+    Input({"type": "possible_flare", "index": ALL, "id": "home_event_delete_btn"}, "n_clicks"),
+    State("home_events_data", "data"),
+    State("home_results_log", "children"),
+    State({"type": "possible_flare", "index": ALL, "id": "home_event_start_time"}, "value"),
+    State({"type": "possible_flare", "index": ALL, "id": "home_event_end_time"}, "value"),
+    State({"type": "possible_flare", "index": ALL, "id": "home_event_curve_select"}, "value"),
+    State({"type": "possible_flare", "index": ALL, "id": "home_event_offset"}, "value"),
+    State({"type": "possible_flare", "index": ALL, "id": "home_event_is_automatic"}, "checked"),
+    State({"type": "possible_flare", "index": ALL, "id": "home_event_is_valid"}, "checked"),
+    prevent_initial_call=True,
+)
+def home_delete_flare_from_log(
+    nc1: list[int],
+    events_data: list[dict],
+    results_log: list,
+    starts: list[str],
+    ends: list[str],
+    curve_select: list[int],
+    offset: list[int],
+    checked: list[bool],
+    checked_valid: list[bool],
+) -> tuple[list, Patch, list[dict], list[str], list[str], list[int], list[int], list[bool]]:
+    """
+    Delete a possible flare entry from the results log and update
+    all associated UI state and stored data.
+
+    This callback is triggered when any dynamic delete button
+    (pattern-matching component with type="possible_flare")
+    is clicked.
+
+    When triggered, the function:
+
+        1. Identifies which flare entry initiated the callback.
+        2. Removes the corresponding rectangular shape from the
+        results graph using a Patch object.
+        3. Removes the corresponding entry from `events_data`.
+        4. Reorders the UI state lists (`starts`, `ends`,
+        `curve_select`, `offset`) by moving the deleted index
+        to the end (to preserve index consistency).
+        5. Removes the last visual log component from `results_log`.
+
+    If no button was clicked, the callback returns `no_update`.
+
+    Parameters
+    ----------
+    nc1 : list[int]
+        List containing the number of clicks for each dynamic
+        delete button. The triggered index determines which
+        flare entry will be removed.
+
+    events_data : list[dict]
+        Stored flare metadata from `home_events_data`, where
+        each entry has the format::
+
+            {
+                "x": list of str
+                    Datetime strings defining the flare interval.
+                "y": list of float
+                    Background-subtracted intensity values.
+                "curves": list of int
+                    Indexes of curves used for background subtraction.
+            }
+
+    results_log : list
+        Current list of UI components stored in
+        `home_results_log.children`.
+
+    starts : list[str]
+        List of start time values for all flare entries.
+
+    ends : list[str]
+        List of end time values for all flare entries.
+
+    curve_select : list[int]
+        List of selected curve indices used for background subtraction
+        for each flare entry.
+
+    offset : list[int]
+        List of offset values used for background subtraction
+        for each flare entry.
+
+    checked : list[bool]
+        List of checkboxes for knowing if event was automatically detected
+        or not.
+
+    checked_valid : list[bool]
+        List of checkboxes for knowing if event was marked as valid
+
+    Returns
+    -------
+    tuple[list, Patch, list[dict], list[str], list[str], list[int], list[int], list[bool]]
+
+        If a delete action is triggered, returns:
+
+            - Updated `results_log`
+            - A patched figure with the corresponding shape removed
+            - Updated `events_data`
+            - Updated `starts`
+            - Updated `ends`
+            - Updated `curve_select`
+            - Updated `offset`
+            - Updated `checked`
+
+        If no delete action occurs or an exception is raised,
+        returns multiple `no_update` values.
+    """
+    try:
+        if any(nc1):
+            triggered_id = callback_context.triggered_id
+            idx = int(triggered_id["index"])
+
+            results_patched_figure = Patch()
+
+            del results_patched_figure["layout"]["shapes"][idx]
+
+            events_data.pop(idx)
+
+            item = starts.pop(idx)
+            starts.append(item)
+
+            item = ends.pop(idx)
+            ends.append(item)
+
+            item = curve_select.pop(idx)
+            curve_select.append(item)
+
+            item = offset.pop(idx)
+            offset.append(item)
+
+            item = checked.pop(idx)
+            checked.append(item)
+
+            item = checked_valid.pop(idx)
+            checked_valid.append(item)
+
+            results_log.pop(-1)
+
+            return results_log, results_patched_figure, events_data, starts, ends, curve_select, offset, checked, checked_valid
+        return no_update
+    except:
+        return no_update
+
+
+@callback(
+    Output("home_results_graph", "figure", allow_duplicate=True),
+    Output({"type": "possible_flare", "index": ALL, "id": "home_event_start_time"}, "value"),
+    Output({"type": "possible_flare", "index": ALL, "id": "home_event_end_time"}, "value"),
+    Output({"type": "possible_flare", "index": ALL, "id": "home_event_curve_select"}, "value"),
+    Output({"type": "possible_flare", "index": ALL, "id": "home_event_offset"}, "value"),
+    Output({"type": "possible_flare", "index": ALL, "id": "home_event_is_automatic"}, "checked"),
+    Output({"type": "possible_flare", "index": ALL, "id": "home_event_is_valid"}, "checked"),
+    Output("home_events_data", "data", allow_duplicate=True),
+    Input({"type": "possible_flare", "index": ALL, "id": "home_log_move_up_btn"}, "n_clicks"),
+    Input({"type": "possible_flare", "index": ALL, "id": "home_log_move_down_btn"}, "n_clicks"),
+    State({"type": "possible_flare", "index": ALL, "id": "home_event_start_time"}, "value"),
+    State({"type": "possible_flare", "index": ALL, "id": "home_event_end_time"}, "value"),
+    State({"type": "possible_flare", "index": ALL, "id": "home_event_curve_select"}, "value"),
+    State({"type": "possible_flare", "index": ALL, "id": "home_event_offset"}, "value"),
+    State({"type": "possible_flare", "index": ALL, "id": "home_event_is_automatic"}, "checked"),
+    State({"type": "possible_flare", "index": ALL, "id": "home_event_is_valid"}, "checked"),
+    State("home_events_data", "data"),
+    State("home_results_graph", "figure"),
+    prevent_initial_call=True,
+)
+def home_move_flare_info(
+    nc1: list[int],
+    nc2: list[int],
+    starts: list[str],
+    ends: list[str],
+    curve_select: list[int],
+    offset: list[int],
+    checked: list[bool],
+    checked_valid: list[bool],
+    events_data: list[dict],
+    fig: dict,
+) -> tuple[Patch, list[str], list[str], list[int], list[int], list[bool], list[dict]]:
+    """
+    Reorders the flare events when the user clicks the "move up" or "move down" buttons.
+
+    This callback swaps the position of a selected event with the previous or next
+    event in the list, updating all related state values accordingly.
+
+    Parameters
+    ----------
+    nc1 : list[int]
+        List of click counts for all "move up" buttons.
+
+    nc2 : list[int]
+        List of click counts for all "move down" buttons.
+
+    starts : list[str]
+        List of start time values for all flare events.
+
+    ends : list[str]
+        List of end time values for all flare events.
+
+    curve_select : list[int]
+        List of selected curve indices used for background subtraction
+        for each flare event.
+
+    offset : list[int]
+        List of offset values used for background subtraction
+        for each flare event.
+
+    checked : list[bool]
+        List of checkboxes for knowing if event was automatically detected
+        or not.
+
+    checked_valid : list[bool]
+        List of checkboxes for knowing if event was marked as valid
+
+    events_data : list[dict]
+        List containing the stored data for each flare event. Each item has
+        the following structure::
+
+            {
+                "x": list[str]
+                    Datetime strings of the event.
+                "y": list[float]
+                    Background-subtracted intensity values.
+                "curves": list[int]
+                    Indices of curves used to compute the median.
+            }
+
+    fig : dict
+        Dictionary representation of the figure from the Results graph.
+
+    Returns
+    -------
+    tuple[Patch, list[str], list[str], list[int], list[int], list[bool], list[dict]]
+        Updated lists with reordered values if a move action is triggered.
+        Returns multiple `no_update` values if no valid move operation is performed.
+    """
+    try:
+        triggered_id = callback_context.triggered_id
+        if any(events_data) and (any(nc1) or any(nc2)):
+            triggered_id = callback_context.triggered_id
+            idx = int(triggered_id["index"])
+            type = triggered_id["id"]
+
+            if type == "home_log_move_up_btn":
+                if idx == 0:
+                    return no_update
+
+                starts[idx], starts[idx-1] = starts[idx-1], starts[idx]
+                ends[idx], ends[idx-1] = ends[idx-1], ends[idx]
+                curve_select[idx], curve_select[idx-1] = curve_select[idx-1], curve_select[idx]
+                offset[idx], offset[idx-1] = offset[idx-1], offset[idx]
+                checked[idx], checked[idx-1] = checked[idx-1], checked[idx]
+                checked_valid[idx], checked_valid[idx-1] = checked_valid[idx-1], checked_valid[idx]
+                events_data[idx], events_data[idx-1] = events_data[idx-1], events_data[idx]
+
+                patched_figure = Patch()
+
+                (
+                    patched_figure["layout"]["shapes"][idx],
+                    patched_figure["layout"]["shapes"][idx - 1],
+                ) = (
+                    fig["layout"]["shapes"][idx - 1],
+                    fig["layout"]["shapes"][idx],
+                )
+
+                return patched_figure, starts, ends, curve_select, offset, checked, checked_valid, events_data
+            elif type == "home_log_move_down_btn":
+                if idx == (len(starts) - 1):
+                    return no_update
+
+                starts[idx], starts[idx+1] = starts[idx+1], starts[idx]
+                ends[idx], ends[idx+1] = ends[idx+1], ends[idx]
+                curve_select[idx], curve_select[idx+1] = curve_select[idx+1], curve_select[idx]
+                offset[idx], offset[idx+1] = offset[idx+1], offset[idx]
+                checked[idx], checked[idx+1] = checked[idx+1], checked[idx]
+                checked_valid[idx], checked_valid[idx+1] = checked_valid[idx+1], checked_valid[idx]
+                events_data[idx], events_data[idx+1] = events_data[idx+1], events_data[idx]
+                
+                patched_figure = Patch()
+
+                (
+                    patched_figure["layout"]["shapes"][idx],
+                    patched_figure["layout"]["shapes"][idx + 1],
+                ) = (
+                    fig["layout"]["shapes"][idx + 1],
+                    fig["layout"]["shapes"][idx],
+                )
+
+                return patched_figure, starts, ends, curve_select, offset, checked, checked_valid, events_data
+        return no_update
+    except:
+        return no_update
+
+
+@callback(
+    Output("home_results_log", "children", allow_duplicate=True),
+    Output("home_results_graph", "figure", allow_duplicate=True),
+    Output("home_events_data", "data", allow_duplicate=True),
+    Output({"type": "possible_flare", "index": ALL, "id": "home_event_delete_btn"}, "n_clicks"),
+    Input("home_results_add_new_log_btn", "n_clicks"),
+    State("home_results_log", "children"),
+    State("home_results_add_new_log_multiselect", "value"),
+    State("home_results_add_new_log_multiselect", "data"),
+    State("home_events_data", "data"),
+    State("home_graph_raw_data", "data"),
+    State({"type": "possible_flare", "index": ALL, "id": "home_event_delete_btn"}, "n_clicks"),
+    State("url", "search"),
+    prevent_initial_call=True,
+)
+def home_generate_new_event_log(
+    nc1: int,
+    logs: list,
+    curve_days_index: list[str],
+    curve_days_data: list[dict],
+    events_data: list[dict],
+    loaded_data: dict,
+    nc_reset: list[int],
+    search: str,
+) -> tuple[list, Patch, list[dict], list[int]]:
+    """
+    Create a new event log entry, update the results graph, and reset
+    dynamic delete buttons.
+
+    This callback is triggered when the "add new log" button is clicked.
+    It appends a new log block to the UI, adds a visual time interval
+    (rectangular shape) to the results graph, updates the stored
+    events metadata, and resets all delete-button click counters.
+
+    Parameters
+    ----------
+    nc1 : int
+        Number of clicks on the "add new log" button.
+
+    logs : list
+        Current list of log UI components stored in
+        "home_results_log.children".
+
+    curve_days_index : list[str]
+        List of selected curve indexes from the MultiSelect component.
+        Each element corresponds to the "value" field of the available
+        curve options and is converted to int before storage.
+
+    curve_days_data : list[dict]
+        Available curve options from the MultiSelect component.
+        Each element has the format::
+
+            {
+                "value": str,
+                "label": str
+            }
+
+    events_data : list[dict]
+        Stored list of event metadata. Each event is represented as::
+
+            {
+                "x": list[str]
+                    Datetime strings defining the event interval.
+                "y": list[float]
+                    Background-subtracted intensity values.
+                "curves": list[int]
+                    Indexes of curves used to compute the median
+                    associated with this event.
+            }
+
+    loaded_data : dict
+        Dictionary containing the loaded curve data::
+
+            {
+                "target": {
+                    "data": list[float]
+                        Intensity values of the target curve.
+                    "table": FITS_rec
+                        FITS table of the target curve.
+                    "day": str
+                        Day string of the target curve (YYYY-MM-DD).
+                },
+                "curves": {
+                    "data_list": list[list[float]]
+                        Intensity values of comparison curves.
+                    "data_times": list[list[float]]
+                        Datetime arrays (as timestamps) for each comparison curve.
+                    "days": list[str]
+                        Day string of each comparison curve.
+                }
+            }
+
+    nc_reset : list[int]
+        Current click counters of all dynamic delete buttons
+        (pattern-matching component with ALL index).
+
+    search : str
+        URL query string used to determine the page language.
+
+    Returns
+    -------
+    tuple[list, Patch, list[dict], list[int]]
+        logs : list
+            Updated list of log UI components including the newly
+            created event log.
+
+        patched_figure : Patch
+            Patch object that appends a rectangular shape to the
+            results graph representing the new event time interval.
+
+        events_data : list[dict]
+            Updated list of stored event metadata including the
+            newly created event.
+
+        nc_reset : list[int]
+            Reset click counters for all dynamic delete buttons
+            (set to None to prevent unintended repeated triggers).
+    """
+    # --- Getting language of the page ---
+
+    query_params = parse_qs(search.lstrip("?"))  # remove "?" and parse
+    lang = query_params.get("lang", ["not recognized"])[0]
+    try:
+        translated = TRANSLATIONS[lang]
+    except:
+        lang = "pt"
+        translated = TRANSLATIONS["pt"]
+
+    index = len(logs)
+
+    start_time_log = "12:00:00"
+    end_time_log = "12:00:00"
+
+    curve_days = [curve_data["label"] for curve_data in curve_days_data]
+
+    logs.append(
+        generate_new_log(translated, index, curve_days, start_time_log, end_time_log, False)
+    )
+
+    target_day = loaded_data["target"]["day"]
+
+    patched_figure = Patch()
+
+    patched_figure["layout"]["shapes"].append(
+        {
+            "type": "rect",
+            "xref": "x",
+            "yref": "paper",
+            "x0": f"{target_day} {start_time_log}",
+            "x1": f"{target_day} {end_time_log}",
+            "y0": 0,
+            "y1": 1,
+            "fillcolor": "#ffcb48",
+            "opacity": 0.3,
+            "line": {"width": 0},
+        }
+    )
+
+    events_data.append(
+        {
+            "x": [f"{target_day} {start_time_log}"],
+            "y": [0],
+            "curves": [int(curve_idx) for curve_idx in curve_days_index]
+        }
+    )
+
+    nc_reset = [None for _ in nc_reset]
+
+    return logs, patched_figure, events_data, nc_reset
+
+
+@callback(
+    Output("home_results_background_graph", "figure", allow_duplicate=True),
+    Output("home_results_day_graph", "figure", allow_duplicate=True),
+    Input("home_results_tabs", "value"),
+    prevent_initial_call=True,
+)
+def home_force_relayout_on_tab(tab: str) -> tuple:
+    """
+    Force the relayout of the background and day result graphs when switching tabs to ensure proper rendering and responsiveness.
+
+    This callback is triggered whenever the user switches between the "background" and "day" tabs in the results section.
+    It updates the `uirevision` property of the corresponding graph's layout, forcing Plotly to recalculate the graph size
+    and layout, which resolves issues with responsiveness when the graph is initially hidden.
+
+    Parameters
+    ----------
+    tab : str
+        The value of the currently selected tab in the results section.
+        Possible values are:
+            - "result"
+            - "background"
+            - "day"
+
+    Returns
+    -------
+    tuple[Patch | dash.no_update, Patch | dash.no_update]
+        patched_figure : Patch or dash.no_update
+            Patch object with an updated `uirevision` for the graph corresponding to the selected tab,
+            or `no_update` if the tab is not active.
+
+        patched_figure : Patch or dash.no_update
+            Patch object with an updated `uirevision` for the other graph, or `no_update` if not applicable.
+    """
+    if tab == "background":
+        patched_figure = Patch()
+        patched_figure["layout"]["uirevision"] = str(np.random.rand())
+        return patched_figure, no_update
+    elif tab == "day":
+        patched_figure = Patch()
+        patched_figure["layout"]["uirevision"] = str(np.random.rand())
+        return no_update, patched_figure
+    return no_update, no_update
+
+
+@callback(
+    Input("home_download_button", "n_clicks"),
+    State("home_download_extension_select", "value"),
+    
+    State({"type": "possible_flare", "index": ALL, "id": "home_event_start_time"}, "value"),
+    State({"type": "possible_flare", "index": ALL, "id": "home_event_end_time"}, "value"),
+    State({"type": "possible_flare", "index": ALL, "id": "home_event_curve_select"}, "value"),
+    State({"type": "possible_flare", "index": ALL, "id": "home_event_offset"}, "value"),
+    State({"type": "possible_flare", "index": ALL, "id": "home_event_is_automatic"}, "checked"),
+    State({"type": "possible_flare", "index": ALL, "id": "home_event_is_automatic"}, "className"),
+    State({"type": "possible_flare", "index": ALL, "id": "home_event_is_valid"}, "checked"),
+
+    State("home_date_input", "value"),
+    State("home_data_select", "value"),
+    State("home_interpolation_select", "value"),
+    State("home_smooth_window_input", "value"),
+    State("home_n_apply_smooth_input", "value"),
+    State("home_diff_std_input", "value"),
+    State("home_number_of_segments_input", "value"),
+    State("home_quantity_mean_std_input", "value"),
+    State("home_merge_gap_input", "value"),
+    State("home_relative_height_input", "value"),
+    State("home_avoid_border_input", "value"),
+    State("home_min_curves_input", "value"),
+    State("home_dtw_weight_input", "value"),
+    State("home_events_data", "data"),
+    prevent_initial_call=True,
+)
+def home_download_results(
+    n_clicks: int,
+    extension: str,
+
+    start_times: list[str],
+    end_times: list[str],
+    curve_select: list[int],
+    offsets: list[int],
+    is_automatic: list[bool],
+    is_edited: list[str],
+    checked_valid: list[bool],
+
+    date: str,
+    data_select: str,
+    interpolation_select: str,
+    smooth_window: int,
+    n_apply_smooth: int,
+    diff_std: float,
+    number_of_segments: int,
+    quantity_mean_std: int,
+    merge_gap: int,
+    relative_height: float,
+    avoid_border: float,
+    min_curves: int,
+    dtw_weight: float,
+    events_data: list[dict],
+) -> None:
+    """
+    Callback responsible for handling the download of results in the selected format.
+
+    Parameters
+    ----------
+    n_clicks : int
+        Number of clicks on the download button.
+
+    extension : str
+        The selected file extension for download.
+
+    start_times : list[str]
+        List of start time values for all flare events.
+
+    end_times : list[str]
+        List of end time values for all flare events.
+
+    curve_select : list[int]
+        List of selected curve indices used for background subtraction for each flare event.
+
+    offsets : list[int]
+        List of offset values used for background subtraction for each flare event.
+
+    is_automatic : list[bool]
+        List of checkboxes for knowing if event was automatically detected or not.
+
+    is_edited : list[str]
+        List of classnames of the automatic checkbox of all events to check if it was edited or not.
+
+    checked_valid : list[bool]
+        List of checkboxes for knowing if event was marked as valid.
+
+    date : str
+        The date of the curve to be analyzed (YYYY-MM-DD format).
+
+    data_select : str
+        The position of the curve to be loaded in the fits file.
+
+    interpolation_select : str
+        The type of interpolation to be applied to the curves.
+
+    smooth_window : int
+        Number of neighbours to apply the smoothing.
+
+    n_apply_smooth : int
+        Number of iterations to apply the smoothing with `smooth_window` neighbours.
+
+    diff_std : float
+        The multiplier of the standard deviation to be used to find peaks.
+
+    number_of_segments : int
+        Number of segments that the curve will be divided for analysing.
+
+    quantity_mean_std : int
+        Number of stds selected from segments to take the mean.
+
+    merge_gap : int
+        The distance of points to merge peaks if they are too close to each other.
+
+    relative_height : float
+        The % of height used to find peaks.
+
+    avoid_border : float
+        Value to not consider border (0 - 30)%.
+
+    min_curves : int
+        Number of minimum curves to have a peak at that period in time.
+
+    dtw_weight : float
+        The weight for the DTW distances.
+
+    events_data : list[dict]
+        A list of the dicts with the data of each possible flare stored in `home_events_data`::
+            {
+                "x": list[str]
+                    List of the datetime strings of the target event.
+                "y": list[float]
+                    List of the intensity of the background subtraction of each event.
+                "curves": list[int]
+                    Indexes of curves used to take the median of this curve
+            }
+
+    Returns
+    -------
+    None
+    """
+    if extension == "temp":
+        save_event_times_to_json(date, start_times, end_times)
+        return
+    elif extension == "db":
+        data_to_save = {
+            date: {
+                "input_data": {
+                    "data_select": data_select,
+                    "interpolation_select": interpolation_select,
+                    "smooth_window": smooth_window,
+                    "n_apply_smooth": n_apply_smooth,
+                    "diff_std": diff_std,
+                    "number_of_segments": number_of_segments,
+                    "quantity_mean_std": quantity_mean_std,
+                    "merge_gap": merge_gap,
+                    "relative_height": relative_height,
+                    "avoid_border": avoid_border,
+                    "min_curves": min_curves,
+                    "dtw_weight": dtw_weight
+                },
+                "event_data": [
+                    {
+                        "metadata": {
+                            "start_time": start_time,
+                            "end_time": end_time,
+                            "curve_select": curve_idx,
+                            "offset": offset,
+                            "is_automatic": is_auto,
+                            "is_edited": bool(is_edit == "logs-checkbox-changed"),
+                            "is_valid": is_valid
+                        },
+                        "numeric_data": {
+                            **events_data[idx]
+                        }
+                    }
+                    for idx, (start_time, end_time, curve_idx, offset, is_auto, is_edit, is_valid) in enumerate(zip(
+                        start_times, end_times, curve_select, offsets, is_automatic, is_edited, checked_valid
+                    ))
+                ]
+            }
+        }
+        save_event_times_to_db(data_to_save)
+        return
