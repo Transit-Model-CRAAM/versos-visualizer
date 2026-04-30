@@ -1,0 +1,104 @@
+.validation-page-container {
+    padding: 20px 10px 10px 10px;
+    box-sizing: border-box;
+    height: 100vh;
+    overflow: hidden;
+    position: relative;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0.5rem;
+}
+
+.validation-bg-logo {
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    width: min(36vw, 370px);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.validation-top-row {
+    display: flex;
+    align-items: stretch;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    z-index: 1;
+    min-height: 88px;
+}
+
+.validation-top-controls-card {
+    width: min(720px, 100%);
+}
+
+.validation-top-controls-content {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.validation-date-input {
+    flex: 1;
+}
+
+.validation-search-btn {
+    min-width: 160px;
+}
+
+.validation-graphs-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+    min-height: 0;
+    z-index: 1;
+}
+
+.validation-graph-card {
+    height: 100%;
+}
+
+.validation-card-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+.validation-card-title {
+    margin: 0 0 8px 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.validation-graph {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+@media (max-width: 1200px) {
+    .validation-graphs-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-rows: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .validation-page-container {
+        grid-template-rows: auto minmax(0, 1fr);
+    }
+
+    .validation-top-row {
+        flex-direction: column;
+    }
+
+    .validation-bg-logo {
+        width: min(60vw, 320px);
+    }
+
+    .validation-graphs-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: repeat(6, minmax(0, 1fr));
+    }
+}
