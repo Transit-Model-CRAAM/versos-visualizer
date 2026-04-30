@@ -83,6 +83,88 @@ def generate_result_plot_layout(lang: str) -> dict:
         "colorway": COLORWAY,
     }
 
+def generate_validation_plot_layout(lang: str) -> dict:
+    """
+    Function responsible for generating the validation plot layout
+
+    Parameters
+    ----------
+    lang : str
+        Language of the page ("pt" or "en").
+
+    Returns
+    -------
+    dict
+        The dict for the result plot layout
+    """
+    translated = TRANSLATIONS[lang]
+    return {
+        "margin": {"r": 35, "t": 35, "b": 55, "l": 55},
+        "legend": {
+            "orientation": "h",  # horizontal legend
+            "yanchor": "bottom",
+            "y": -0.3,  # position below the graph
+            "xanchor": "center",
+            "x": 0.5,
+            "bgcolor": "rgba(0,0,0,0)",  # transparent background
+            "borderwidth": 0,
+            "entrywidth": 50, 
+            "entrywidthmode": "pixels",
+        },
+        "yaxis": {"title": f"{translated['graphs']['intensity']}"},
+        "colorway": COLORWAY,
+    }
+
+def generate_validation_goes_plot_layout(lang: str) -> dict:
+    """
+    Function responsible for generating the validation goes plot layout
+
+    Parameters
+    ----------
+    lang : str
+        Language of the page ("pt" or "en").
+
+    Returns
+    -------
+    dict
+        The dict for the validation goes plot layout
+    """
+    translated = TRANSLATIONS[lang]
+    return {
+        "margin": {"r": 40, "t": 35, "b": 55, "l": 65}, # L um pouco maior para caber a notação científica
+        "legend": {
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": -0.25, # Ajustado para não colidir com o título do eixo X
+            "xanchor": "center",
+            "x": 0.5,
+            "bgcolor": "rgba(0,0,0,0)",
+            "borderwidth": 0,
+        },
+        "yaxis": {
+            "title": f"{translated['graphs']['intensity']} (W/m²)",
+            "type": "log", # ESSENCIAL para Raio-X
+            "range": [-9, -2], # Fixa de 10^-9 a 10^-2 (cobre de 'zero' a Classe X extrema)
+            "dtick": 1, # Garante que apareça uma marca para cada potência de 10
+            "gridcolor": "rgba(128, 128, 128, 0.2)",
+            "zeroline": False,
+        },
+        "xaxis": {
+            "showgrid": True,
+            "gridcolor": "rgba(128, 128, 128, 0.2)",
+        },
+        "colorway": COLORWAY,
+        "template": "plotly_dark", # O fundo escuro ajuda a destacar as cores das classes
+        "annotations": [
+            # Marcadores das Classes no lado direito (opcional, mas ajuda muito)
+            {"x": 1, "y": -8.5, "xref": "paper", "yref": "y", "text": "A", "showarrow": False, "font": {"color": "gray"}},
+            {"x": 1, "y": -7.5, "xref": "paper", "yref": "y", "text": "B", "showarrow": False, "font": {"color": "gray"}},
+            {"x": 1, "y": -6.5, "xref": "paper", "yref": "y", "text": "C", "showarrow": False, "font": {"color": "gray"}},
+            {"x": 1, "y": -5.5, "xref": "paper", "yref": "y", "text": "M", "showarrow": False, "font": {"color": "orange", "size": 14}},
+            {"x": 1, "y": -4.5, "xref": "paper", "yref": "y", "text": "X", "showarrow": False, "font": {"color": "red", "size": 14}},
+        ]
+    }
+
 def generate_fig_properties(lang: str) -> dict:
     """
     Function responsible for generating the regular fig properties
@@ -119,6 +201,44 @@ def generate_result_fig_properties(lang: str) -> dict:
     return {
         "data": [],
         "layout": generate_result_plot_layout(lang),
+    }
+
+def generate_validation_fig_properties(lang: str) -> dict:
+    """
+    Function responsible for generating the validation fig properties
+
+    Parameters
+    ----------
+    lang : str
+        Language of the page ("pt" or "en").
+
+    Returns
+    -------
+    dict
+        The dict for the result fig properties
+    """
+    return {
+        "data": [],
+        "layout": generate_validation_plot_layout(lang),
+    }
+
+def generate_validation_goes_fig_properties(lang: str) -> dict:
+    """
+    Function responsible for generating the validation goes fig properties
+
+    Parameters
+    ----------
+    lang : str
+        Language of the page ("pt" or "en").
+
+    Returns
+    -------
+    dict
+        The dict for the result fig properties
+    """
+    return {
+        "data": [],
+        "layout": generate_validation_goes_plot_layout(lang),
     }
 
 def generate_background_plot_layout(lang: str) -> dict:
