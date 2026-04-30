@@ -31,6 +31,7 @@ from src.functions.data_treatment import *
 from src.functions.data_validation import *
 from src.functions.database import *
 from src.constants.graph import *
+from src.constants.dates import *
 from src.constants.translations import TRANSLATIONS
 
 register_page(__name__, path="/")
@@ -69,10 +70,12 @@ def layout(**kwargs):
             dmc.DateInput(
                 id="home_date_input",
                 label=translated["components"]["date_input"]["label"],
-                # description=translated["components"]["date_input"]["description"],
-                minDate="2011-01-01",
-                maxDate="2022-07-27",
+                minDate=DATA_INICIAL,
+                maxDate=DATA_FINAL,
+                disabledDates=DATAS_FALTANTES,
                 className="custom-input home-date-input",
+                valueFormat="DD/MM/YYYY",
+                hideOutsideDates=True, 
             ),
             dmc.Select(
                 id="home_data_select",
