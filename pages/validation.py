@@ -22,7 +22,6 @@ from src.functions.data_validation import *
 from src.components.cards import generate_card
 from src.constants.graph import (
     PLOT_CONFIG,
-    generate_result_fig_properties,
     generate_validation_fig_properties,
     generate_validation_goes_fig_properties
 )
